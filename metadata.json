@@ -1,0 +1,8 @@
+{
+  "name": "SK Pack Film Dashboard",
+  "description": "Live Google Sheets packing operations dashboard with status visualizations and Vercel deployment support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
