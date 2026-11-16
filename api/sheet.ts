@@ -4,6 +4,142 @@ interface VercelReq {
   method?: string;
   url?: string;
   query?: Record<string, string | string[] | undefined>;
+  headers?: Record<string, string | string[] | undefined>;
+}
+
+const FIREBASE_PROJECT_ID = 'gen-lang-client-0455817746';
+const ALLOWED_EMAIL_DOMAIN = 'dplusonline.net';
+const FIREBASE_CERTS_URL =
+  'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+
+let cachedCerts: { certs: Record<string, string>; expiresAt: number } | null =
+  null;
+
+function decodeBase64UrlJson<T>(segment: string): T {
+  const padded = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const json = Buffer.from(padded, 'base64').toString('utf8');
+  return JSON.parse(json) as T;
+}
+
+async function getFirebasePublicCerts(
+  forceRefresh = false
+): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (!forceRefresh && cachedCerts && cachedCerts.expiresAt > now) {
+    return cachedCerts.certs;
+  }
+
+  const res = await fetch(FIREBASE_CERTS_URL, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Unable to fetch Google Auth certificates (HTTP ${res.status}).`);
+  }
+  const certs = (await res.json()) as Record<string, string>;
+  const cacheControl = res.headers.get('cache-control') || '';
+  const maxAgeMatch = cacheControl.match(/max-age=(\d+)/i);
+  const maxAgeSec = maxAgeMatch ? Number(maxAgeMatch[1]) : 3600;
+  cachedCerts = {
+    certs,
+    expiresAt: now + Math.max(60, maxAgeSec) * 1000,
+  };
+  return certs;
+}
+
+class AuthHttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function verifyCompanyFirebaseToken(
+  authHeaderValue: string | string[] | undefined
+): Promise<{ email: string; uid: string }> {
+  const rawHeader = Array.isArray(authHeaderValue)
+    ? authHeaderValue[0] || ''
+    : authHeaderValue || '';
+  const match = rawHeader.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1]?.trim();
+
+  if (!token) {
+    throw new AuthHttpError(
+      401,
+      `Authentication required. Sign in with an @${ALLOWED_EMAIL_DOMAIN} Google account.`
+    );
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new AuthHttpError(401, 'Invalid authentication token format.');
+  }
+
+  let header: { alg?: string; kid?: string };
+  let payload: {
+    aud?: string;
+    iss?: string;
+    sub?: string;
+    exp?: number;
+    iat?: number;
+    email?: string;
+    email_verified?: boolean;
+  };
+
+  try {
+    header = decodeBase64UrlJson(parts[0]);
+    payload = decodeBase64UrlJson(parts[1]);
+  } catch {
+    throw new AuthHttpError(401, 'Unable to decode authentication token.');
+  }
+
+  if (header.alg !== 'RS256' || !header.kid) {
+    throw new AuthHttpError(401, 'Unsupported authentication token algorithm.');
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expectedIssuer = `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`;
+
+  if (
+    payload.aud !== FIREBASE_PROJECT_ID ||
+    payload.iss !== expectedIssuer ||
+    !payload.sub ||
+    typeof payload.exp !== 'number' ||
+    payload.exp <= nowSec
+  ) {
+    throw new AuthHttpError(401, 'Session expired or invalid. Please sign in again.');
+  }
+
+  let certs = await getFirebasePublicCerts(false);
+  let pem = certs[header.kid];
+  if (!pem) {
+    certs = await getFirebasePublicCerts(true);
+    pem = certs[header.kid];
+  }
+  if (!pem) {
+    throw new AuthHttpError(401, 'Unable to match signing key for session token.');
+  }
+
+  const verifier = crypto.createVerify('RSA-SHA256');
+  verifier.update(`${parts[0]}.${parts[1]}`);
+  verifier.end();
+  const sig = Buffer.from(
+    parts[2].replace(/-/g, '+').replace(/_/g, '/'),
+    'base64'
+  );
+  if (!verifier.verify(pem, sig)) {
+    throw new AuthHttpError(401, 'Invalid session token signature.');
+  }
+
+  const email = (payload.email || '').trim().toLowerCase();
+  const atIndex = email.lastIndexOf('@');
+  const domain = atIndex > 0 ? email.slice(atIndex + 1) : '';
+  if (domain !== ALLOWED_EMAIL_DOMAIN || payload.email_verified !== true) {
+    throw new AuthHttpError(
+      403,
+      `Access denied for ${email || 'this account'}. Only @${ALLOWED_EMAIL_DOMAIN} Google accounts are permitted.`
+    );
+  }
+
+  return { email, uid: payload.sub };
 }
 
 interface VercelRes {
@@ -462,6 +598,15 @@ export default async function handler(req: VercelReq, res: VercelRes) {
       hasDefaultEnvSheet: Boolean(defaultEnvUrl.trim()),
       hasServiceAccount: serviceCreds !== null,
     });
+  }
+
+  try {
+    await verifyCompanyFirebaseToken(req.headers?.authorization);
+  } catch (err) {
+    const status = err instanceof AuthHttpError ? err.status : 401;
+    const message =
+      err instanceof Error ? err.message : 'Unauthorized request.';
+    return res.status(status).json({ error: message });
   }
 
   const requestedUrl = getParam(req, 'url').trim();

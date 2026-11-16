@@ -4,8 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import {
+  AuthHttpError,
   fetchPublicGoogleSheet,
   hasServiceAccountCredentials,
+  verifyCompanyFirebaseToken,
 } from './src/lib/sheetServer.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +29,16 @@ async function startServer() {
         hasDefaultEnvSheet: Boolean(defaultEnvUrl.trim()),
         hasServiceAccount: hasServiceAccountCredentials(),
       });
+      return;
+    }
+
+    try {
+      await verifyCompanyFirebaseToken(req.headers.authorization);
+    } catch (err) {
+      const status = err instanceof AuthHttpError ? err.status : 401;
+      const message =
+        err instanceof Error ? err.message : 'Unauthorized request.';
+      res.status(status).json({ error: message });
       return;
     }
 

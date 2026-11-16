@@ -7,123 +7,102 @@ import {
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { SheetTabInfo } from '../types/packing';
 
-export const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+export const ALLOWED_EMAIL_DOMAIN = 'dplusonline.net';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
-for (const scope of SCOPES) {
-  provider.addScope(scope);
+provider.setCustomParameters({
+  prompt: 'select_account',
+  hd: ALLOWED_EMAIL_DOMAIN,
+});
+
+export function isAllowedCompanyEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const trimmed = email.trim().toLowerCase();
+  const atIndex = trimmed.lastIndexOf('@');
+  if (atIndex <= 0) return false;
+  const domain = trimmed.slice(atIndex + 1);
+  return domain === ALLOWED_EMAIL_DOMAIN;
 }
 
-let isSigningIn = false;
-let cachedAccessToken: string | null = null;
-
-export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
-  onAuthFailure?: (user: User | null) => void
-) => {
+export function initAuth(
+  onAuthChange: (user: User | null) => void,
+  onRejectedDomain?: (message: string) => void
+) {
   return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        cachedAccessToken = null;
-        if (onAuthFailure) onAuthFailure(user);
+    if (user && !isAllowedCompanyEmail(user.email)) {
+      const rejectedEmail = user.email || 'this account';
+      try {
+        await auth.signOut();
+      } catch {
+        // Ignore signOut error
       }
-    } else {
-      cachedAccessToken = null;
-      if (onAuthFailure) onAuthFailure(null);
+      if (onRejectedDomain) {
+        onRejectedDomain(
+          `Access denied for ${rejectedEmail}. Only @${ALLOWED_EMAIL_DOMAIN} Google accounts are permitted.`
+        );
+      }
+      onAuthChange(null);
+      return;
     }
+
+    onAuthChange(user);
   });
-};
-
-export const googleSignIn = async (): Promise<{
-  user: User;
-  accessToken: string;
-} | null> => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to obtain Google Sheets access token.');
-    }
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } finally {
-    isSigningIn = false;
-  }
-};
-
-export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken;
-};
-
-export const logout = async () => {
-  await auth.signOut();
-  cachedAccessToken = null;
-};
-
-export async function fetchSpreadsheetMetadata(
-  spreadsheetId: string,
-  accessToken: string
-): Promise<{ title: string; tabs: SheetTabInfo[] }> {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
-    spreadsheetId
-  )}?fields=properties.title,sheets.properties(sheetId,title)`;
-
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    const message =
-      errBody?.error?.message ||
-      `Unable to open Google Sheet (HTTP ${res.status}). Check the Sheet URL/ID and your permissions.`;
-    throw new Error(message);
-  }
-
-  const data = await res.json();
-  const title: string = data?.properties?.title || 'Untitled Spreadsheet';
-  const tabs: SheetTabInfo[] = Array.isArray(data?.sheets)
-    ? data.sheets.map((s: { properties?: { sheetId?: number; title?: string } }) => ({
-        sheetId: s.properties?.sheetId ?? 0,
-        title: s.properties?.title ?? 'Sheet1',
-      }))
-    : [];
-
-  return { title, tabs };
 }
 
-export async function fetchSpreadsheetValues(
-  spreadsheetId: string,
-  sheetTitle: string,
-  accessToken: string
-): Promise<string[][]> {
-  const escapedTab = sheetTitle.replace(/'/g, "''");
-  const range = encodeURIComponent(`'${escapedTab}'!A1:Z5000`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
-    spreadsheetId
-  )}/values/${range}`;
+export async function googleSignIn(): Promise<User> {
+  const result = await signInWithPopup(auth, provider);
+  if (!isAllowedCompanyEmail(result.user.email)) {
+    const rejectedEmail = result.user.email || 'this account';
+    await auth.signOut();
+    throw new Error(
+      `Access denied for ${rejectedEmail}. Only @${ALLOWED_EMAIL_DOMAIN} Google accounts are permitted.`
+    );
+  }
+  return result.user;
+}
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: 'no-store',
-  });
+export async function getCurrentUserIdToken(): Promise<string | null> {
+  if (!auth.currentUser) return null;
+  if (!isAllowedCompanyEmail(auth.currentUser.email)) return null;
+  return auth.currentUser.getIdToken();
+}
 
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    const message =
-      errBody?.error?.message ||
-      `Unable to read rows from "${sheetTitle}" (HTTP ${res.status}).`;
-    throw new Error(message);
+export async function logout(): Promise<void> {
+  await auth.signOut();
+}
+
+export function formatAuthError(err: unknown): string {
+  const code =
+    typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as { code?: unknown }).code || '')
+      : '';
+  const message =
+    err instanceof Error ? err.message : 'Unable to sign in with Google.';
+
+  if (
+    code === 'auth/unauthorized-domain' ||
+    message.includes('unauthorized-domain')
+  ) {
+    const host =
+      typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+    return `Domain "${host}" is not authorized in Firebase Authentication. Add "${host}" under Firebase Console → Authentication → Settings → Authorized domains.`;
   }
 
-  const data = await res.json();
-  return Array.isArray(data?.values) ? data.values : [];
+  if (code === 'auth/popup-closed-by-user') {
+    return 'Sign-in window was closed before completing authentication.';
+  }
+
+  if (code === 'auth/popup-blocked') {
+    return 'Sign-in popup was blocked by your browser. Allow popups for this site and try again.';
+  }
+
+  if (code === 'auth/cancelled-popup-request') {
+    return 'Previous sign-in request was cancelled. Please try again.';
+  }
+
+  return message;
 }

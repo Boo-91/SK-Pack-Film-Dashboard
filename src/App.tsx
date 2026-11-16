@@ -12,14 +12,13 @@ import {
   Mail,
   Menu,
   RefreshCw,
-  Sheet,
   X,
 } from 'lucide-react';
 import { DailyIssuesView } from './components/DailyIssuesView';
+import { LoginView } from './components/LoginView';
 import { MonthlyIssuesView } from './components/MonthlyIssuesView';
 import { OrderDetailDrawer } from './components/OrderDetailDrawer';
 import { PackingQueueTable } from './components/PackingQueueTable';
-import { SheetSetupView } from './components/SheetSetupView';
 import { WeeklyCapacityView } from './components/StationsView';
 import {
   CapacityScorecardStrip,
@@ -27,9 +26,8 @@ import {
   PackingOverviewVisuals,
 } from './components/StatusVisuals';
 import {
-  fetchSpreadsheetMetadata,
-  fetchSpreadsheetValues,
-  getAccessToken,
+  formatAuthError,
+  getCurrentUserIdToken,
   googleSignIn,
   initAuth,
   logout,
@@ -44,7 +42,6 @@ import {
 } from './lib/issuesParser';
 import {
   BASELINE_PACKING_CSV,
-  extractGoogleSheetInfo,
   getDailyThirtyOneDayWindow,
   getThreeWeekWindow,
   getTodayCapacityRecord,
@@ -58,7 +55,6 @@ import {
   MonthlyIssueRow,
   PackingCapacityRow,
   SheetConnectionState,
-  SheetTabInfo,
 } from './types/packing';
 
 type ActiveView =
@@ -66,26 +62,9 @@ type ActiveView =
   | 'daily'
   | 'weekly'
   | 'daily-issues'
-  | 'monthly-issues'
-  | 'setup';
+  | 'monthly-issues';
 
 const STORAGE_PUBLIC_SHEET_KEY = 'packline_public_sheet_config';
-
-function findMatchingTabTitle(
-  tabs: SheetTabInfo[],
-  preferred: string,
-  keywords: string[]
-): string | null {
-  if (!tabs || tabs.length === 0) return null;
-  const prefLower = preferred.trim().toLowerCase();
-  const exact = tabs.find((t) => t.title.trim().toLowerCase() === prefLower);
-  if (exact) return exact.title;
-  const byKeyword = tabs.find((t) => {
-    const lower = t.title.trim().toLowerCase();
-    return keywords.every((kw) => lower.includes(kw));
-  });
-  return byKeyword ? byKeyword.title : null;
-}
 
 function formatClockTime(date: Date): string {
   return date.toLocaleTimeString([], {
@@ -128,13 +107,15 @@ export default function App() {
   );
   const [connection, setConnection] =
     useState<SheetConnectionState>(DEFAULT_CONNECTION);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [autoRefreshSec, setAutoRefreshSec] = useState<number>(30);
 
   const [user, setUser] = useState<User | null>(null);
-  const [needsAuth, setNeedsAuth] = useState(true);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CapacityStatus | 'All'>(
@@ -150,19 +131,23 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = initAuth(
-      (signedInUser) => {
-        setUser(signedInUser);
-        setNeedsAuth(false);
+      (authUser) => {
+        setUser(authUser);
+        setIsAuthChecking(false);
       },
-      (existingUser) => {
-        setUser(existingUser);
-        setNeedsAuth(true);
+      (rejectedMessage) => {
+        setAuthError(rejectedMessage);
       }
     );
     return () => unsubscribe();
   }, []);
 
   const fetchPublicTabRows = async (sheetUrl: string, tabName?: string) => {
+    const idToken = await getCurrentUserIdToken();
+    if (!idToken) {
+      throw new Error('Authentication required to load company Google Sheets.');
+    }
+
     const params = new URLSearchParams();
     if (sheetUrl) params.set('url', sheetUrl);
     if (tabName) params.set('sheet', tabName);
@@ -170,6 +155,9 @@ export default function App() {
 
     const res = await fetch(`/api/sheet?${params.toString()}`, {
       cache: 'no-store',
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
     });
     const payload = await res.json();
     if (!res.ok) {
@@ -268,146 +256,63 @@ export default function App() {
     []
   );
 
-  const loadPrivateTab = useCallback(
-    async (
-      spreadsheetId: string,
-      title: string,
-      tabTitle: string,
-      tabs: SheetTabInfo[]
-    ) => {
-      setIsSyncing(true);
-      setSyncError(null);
-      try {
-        const accessToken = await getAccessToken();
-        if (!accessToken) {
-          setNeedsAuth(true);
-          throw new Error(
-            'Your Google session expired. Please sign in with Google again.'
-          );
-        }
-
-        const detectedDailyTab = findMatchingTabTitle(
-          tabs,
-          DEFAULT_DAILY_ISSUES_TAB,
-          ['daily', 'issue']
-        );
-        const detectedMonthlyTab = findMatchingTabTitle(
-          tabs,
-          DEFAULT_MONTHLY_ISSUES_TAB,
-          ['monthly', 'issue']
-        );
-
-        const [packingRes, dailyRes, monthlyRes] = await Promise.allSettled([
-          fetchSpreadsheetValues(spreadsheetId, tabTitle, accessToken),
-          detectedDailyTab
-            ? fetchSpreadsheetValues(spreadsheetId, detectedDailyTab, accessToken)
-            : Promise.reject(new Error('Tab not found')),
-          detectedMonthlyTab
-            ? fetchSpreadsheetValues(
-                spreadsheetId,
-                detectedMonthlyTab,
-                accessToken
-              )
-            : Promise.reject(new Error('Tab not found')),
-        ]);
-
-        if (packingRes.status === 'rejected') {
-          throw packingRes.reason;
-        }
-
-        const parsed = parseRowsToCapacityData(packingRes.value);
-        setRecords(parsed.records);
-
-        let dailyIssuesSynced = false;
-        if (dailyRes.status === 'fulfilled' && dailyRes.value.length > 0) {
-          const parsedDaily = parseRowsToDailyIssues(dailyRes.value);
-          if (parsedDaily.length > 0) {
-            setDailyIssues(parsedDaily);
-            dailyIssuesSynced = true;
-          }
-        }
-
-        let monthlyIssuesSynced = false;
-        if (monthlyRes.status === 'fulfilled' && monthlyRes.value.length > 0) {
-          const parsedMonthly = parseRowsToMonthlyIssues(monthlyRes.value);
-          if (parsedMonthly.length > 0) {
-            setMonthlyIssues(parsedMonthly);
-            monthlyIssuesSynced = true;
-          }
-        }
-
-        setConnection({
-          mode: 'google-oauth',
-          sourceLabel: `${title} (${tabTitle})`,
-          spreadsheetId,
-          selectedTab: tabTitle,
-          dailyIssuesTab: detectedDailyTab || DEFAULT_DAILY_ISSUES_TAB,
-          monthlyIssuesTab: detectedMonthlyTab || DEFAULT_MONTHLY_ISSUES_TAB,
-          dailyIssuesSynced,
-          monthlyIssuesSynced,
-          tabs,
-          lastSyncedAt: formatClockTime(new Date()),
-          headers: parsed.headers,
-          matchedColumns: parsed.matchedColumns,
-        });
-      } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : 'Unable to read Google Sheet rows.';
-        setSyncError(msg);
-      } finally {
-        setIsSyncing(false);
-      }
-    },
-    []
-  );
-
   useEffect(() => {
+    if (!user) {
+      setIsBootstrapping(false);
+      return;
+    }
+
     let active = true;
+    setIsBootstrapping(true);
     const bootstrap = async () => {
       try {
-        const checkRes = await fetch('/api/sheet?check=1');
-        if (checkRes.ok) {
-          const info = await checkRes.json();
-          if (active && info?.hasDefaultEnvSheet) {
-            await loadPublicSheet(
-              '',
-              undefined,
-              false,
-              DEFAULT_DAILY_ISSUES_TAB,
-              DEFAULT_MONTHLY_ISSUES_TAB
-            );
-            return;
+        try {
+          const checkRes = await fetch('/api/sheet?check=1', {
+            cache: 'no-store',
+          });
+          if (checkRes.ok) {
+            const info = await checkRes.json();
+            if (active && info?.hasDefaultEnvSheet) {
+              await loadPublicSheet(
+                '',
+                undefined,
+                false,
+                DEFAULT_DAILY_ISSUES_TAB,
+                DEFAULT_MONTHLY_ISSUES_TAB
+              );
+              return;
+            }
           }
+        } catch {
+          // Ignore check error
         }
-      } catch {
-        // Ignore check error
-      }
 
-      try {
-        const saved = localStorage.getItem(STORAGE_PUBLIC_SHEET_KEY);
-        if (saved && active) {
-          const parsed = JSON.parse(saved);
-          if (parsed?.url) {
-            await loadPublicSheet(
-              parsed.url,
-              parsed.tabName || undefined,
-              false,
-              parsed.dailyIssuesTab || DEFAULT_DAILY_ISSUES_TAB,
-              parsed.monthlyIssuesTab || DEFAULT_MONTHLY_ISSUES_TAB
-            );
+        try {
+          const saved = localStorage.getItem(STORAGE_PUBLIC_SHEET_KEY);
+          if (saved && active) {
+            const parsed = JSON.parse(saved);
+            if (parsed?.url) {
+              await loadPublicSheet(
+                parsed.url,
+                parsed.tabName || undefined,
+                false,
+                parsed.dailyIssuesTab || DEFAULT_DAILY_ISSUES_TAB,
+                parsed.monthlyIssuesTab || DEFAULT_MONTHLY_ISSUES_TAB
+              );
+            }
           }
+        } catch {
+          // Stay on baseline snapshot
         }
-      } catch {
-        // Stay on uploaded snapshot
+      } finally {
+        if (active) setIsBootstrapping(false);
       }
     };
     bootstrap();
     return () => {
       active = false;
     };
-  }, [loadPublicSheet]);
+  }, [user, loadPublicSheet]);
 
   const handleSyncNow = useCallback(async () => {
     if (connection.mode === 'public-url') {
@@ -422,35 +327,44 @@ export default function App() {
         connection.dailyIssuesTab || DEFAULT_DAILY_ISSUES_TAB,
         connection.monthlyIssuesTab || DEFAULT_MONTHLY_ISSUES_TAB
       );
-    } else if (
-      connection.mode === 'google-oauth' &&
-      connection.spreadsheetId &&
-      connection.selectedTab
-    ) {
-      await loadPrivateTab(
-        connection.spreadsheetId,
-        connection.sourceLabel.replace(/\s*\([^)]*\)$/, ''),
-        connection.selectedTab,
-        connection.tabs || []
-      );
     } else {
+      try {
+        const checkRes = await fetch('/api/sheet?check=1', {
+          cache: 'no-store',
+        });
+        if (checkRes.ok) {
+          const info = await checkRes.json();
+          if (info?.hasDefaultEnvSheet) {
+            await loadPublicSheet(
+              '',
+              undefined,
+              false,
+              DEFAULT_DAILY_ISSUES_TAB,
+              DEFAULT_MONTHLY_ISSUES_TAB
+            );
+            return;
+          }
+        }
+      } catch {
+        // Ignore check error
+      }
       setConnection((prev) => ({
         ...prev,
         lastSyncedAt: formatClockTime(new Date()),
       }));
     }
-  }, [connection, loadPrivateTab, loadPublicSheet]);
+  }, [connection, loadPublicSheet]);
 
   useEffect(() => {
-    if (autoRefreshSec <= 0 || connection.mode === 'demo') return;
+    if (!user || autoRefreshSec <= 0 || connection.mode === 'demo') return;
     const timer = window.setInterval(() => {
       handleSyncNow();
     }, autoRefreshSec * 1000);
     return () => window.clearInterval(timer);
-  }, [autoRefreshSec, connection.mode, handleSyncNow]);
+  }, [user, autoRefreshSec, connection.mode, handleSyncNow]);
 
   useEffect(() => {
-    if (connection.mode === 'demo') return;
+    if (!user || connection.mode === 'demo') return;
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         handleSyncNow();
@@ -459,23 +373,19 @@ export default function App() {
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () =>
       document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [connection.mode, handleSyncNow]);
+  }, [user, connection.mode, handleSyncNow]);
 
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
+    setAuthError(null);
     setSyncError(null);
     try {
-      const result = await googleSignIn();
-      if (result) {
-        setUser(result.user);
-        setNeedsAuth(false);
-      }
+      const signedInUser = await googleSignIn();
+      setUser(signedInUser);
     } catch (err) {
-      setSyncError(
-        err instanceof Error
-          ? err.message
-          : 'Google sign-in was cancelled or blocked.'
-      );
+      const msg = formatAuthError(err);
+      setAuthError(msg);
+      setSyncError(msg);
     } finally {
       setIsLoggingIn(false);
     }
@@ -484,59 +394,9 @@ export default function App() {
   const handleGoogleLogout = async () => {
     await logout();
     setUser(null);
-    setNeedsAuth(true);
-    if (connection.mode === 'google-oauth') {
-      handleLoadSampleData();
-    }
-  };
-
-  const handleFetchPrivateTabs = async (urlOrId: string) => {
-    setIsSyncing(true);
+    setAuthError(null);
     setSyncError(null);
-    try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        setNeedsAuth(true);
-        throw new Error('Please sign in with Google first.');
-      }
-
-      const { spreadsheetId } = extractGoogleSheetInfo(urlOrId);
-      if (!spreadsheetId) {
-        throw new Error(
-          'Invalid Google Sheet link or ID. Paste the full spreadsheet URL.'
-        );
-      }
-
-      const meta = await fetchSpreadsheetMetadata(spreadsheetId, accessToken);
-      return {
-        spreadsheetId,
-        title: meta.title,
-        tabs: meta.tabs,
-      };
-    } catch (err) {
-      setSyncError(
-        err instanceof Error ? err.message : 'Unable to access spreadsheet.'
-      );
-      return null;
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handleLoadSampleData = () => {
-    try {
-      localStorage.removeItem(STORAGE_PUBLIC_SHEET_KEY);
-    } catch {
-      // Ignore
-    }
-    setSyncError(null);
-    setRecords(INITIAL_PARSED.records);
-    setDailyIssues(INITIAL_DAILY_ISSUES);
-    setMonthlyIssues(INITIAL_MONTHLY_ISSUES);
-    setConnection({
-      ...DEFAULT_CONNECTION,
-      lastSyncedAt: formatClockTime(new Date()),
-    });
+    setConnection(DEFAULT_CONNECTION);
   };
 
   const availableWeeks = useMemo(() => {
@@ -700,7 +560,6 @@ export default function App() {
     weekly: 'SK Pack Film / Weekly Summary',
     'daily-issues': 'Quality / Daily Internal Issues',
     'monthly-issues': 'Quality / Monthly Internal Issues',
-    setup: 'Settings / Sheet & Vercel',
   };
 
   const renderNavButton = (
@@ -802,42 +661,21 @@ export default function App() {
               {qualityNavItems.map((item) => renderNavButton(item, isMobile))}
             </div>
           </div>
-
-          {/* Connection Setup Item */}
-          <div className="pt-0.5">
-            {renderNavButton(
-              { id: 'setup', label: 'Sheet & Vercel', icon: Sheet },
-              isMobile
-            )}
-          </div>
         </nav>
       </div>
 
       {/* Data Source & Signed-In User Summary */}
       <div className="pt-5 border-t border-[#1B2B48] space-y-4">
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-400">Data Source</p>
-            <p className="text-sm font-semibold text-slate-100 truncate">
-              {connection.sourceLabel}
-            </p>
-            <p className="text-xs text-slate-400 font-mono tabular-nums">
-              Synced {connection.lastSyncedAt}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveView('setup');
-              setMobileNavOpen(false);
-            }}
-            className="w-full h-9 px-3 text-xs font-medium text-slate-200 bg-[#13223D] hover:bg-[#1B3157] border border-[#223659] rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer"
-          >
-            {connection.mode === 'demo'
-              ? 'Connect Live Sheet'
-              : 'Change Data Source'}
-          </button>
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-400">Data Source</p>
+          <p className="text-sm font-semibold text-slate-100 truncate">
+            {isBootstrapping && connection.mode === 'demo'
+              ? 'Connecting Live Sheet...'
+              : connection.sourceLabel}
+          </p>
+          <p className="text-xs text-slate-400 font-mono tabular-nums">
+            Synced {connection.lastSyncedAt}
+          </p>
         </div>
 
         <div className="pt-3.5 border-t border-[#162542]">
@@ -894,6 +732,31 @@ export default function App() {
       </div>
     </div>
   );
+
+  if (isAuthChecking) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <div className="min-h-screen bg-[#060D1A] text-slate-100 flex items-center justify-center p-6">
+          <div className="flex items-center gap-3 text-sm text-slate-300">
+            <RefreshCw className="w-4 h-4 text-sky-400 animate-spin" />
+            <span>Checking sign-in session...</span>
+          </div>
+        </div>
+      </MotionConfig>
+    );
+  }
+
+  if (!user) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <LoginView
+          onSignIn={handleGoogleLogin}
+          isLoading={isLoggingIn}
+          error={authError}
+        />
+      </MotionConfig>
+    );
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -959,52 +822,27 @@ export default function App() {
                 <option value={60}>Auto-Sync: 60s</option>
               </select>
 
-              {connection.mode === 'demo' ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveView('setup')}
-                  className="h-9 px-3.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 active:scale-[0.98] rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  Connect Live Sheet
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSyncNow}
-                  disabled={isSyncing}
-                  className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 active:scale-[0.98] disabled:opacity-60 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  <RefreshCw
-                    className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`}
-                  />
-                  <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleSyncNow}
+                disabled={isBootstrapping || isSyncing}
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 active:scale-[0.98] disabled:opacity-60 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    isBootstrapping || isSyncing ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>
+                  {isBootstrapping || isSyncing ? 'Syncing...' : 'Sync Now'}
+                </span>
+              </button>
             </div>
           </header>
 
           {/* Main Workspace Viewport */}
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1440px] w-full mx-auto space-y-6">
-            {connection.mode === 'demo' && activeView !== 'setup' && (
-              <div className="bg-[#0C172B] border border-amber-500/40 rounded-xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <p className="text-xs sm:text-sm text-slate-300">
-                  <strong className="font-medium text-amber-300">
-                    Showing static CSV snapshot (not connected to a live sheet)
-                  </strong>
-                  {' · '}
-                  Paste your live Google Sheet link in Sheet & Vercel (or set GOOGLE_SHEET_URL) to see live updates.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveView('setup')}
-                  className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors whitespace-nowrap shrink-0 text-left sm:text-right cursor-pointer"
-                >
-                  Connect Live Google Sheet →
-                </button>
-              </div>
-            )}
-
-            {syncError && activeView !== 'setup' && (
+            {syncError && (
               <div className="bg-red-950/50 border border-red-800/60 rounded-xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start gap-2.5 text-xs sm:text-sm text-red-200">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -1012,10 +850,10 @@ export default function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveView('setup')}
+                  onClick={handleSyncNow}
                   className="text-xs font-medium text-red-300 hover:text-red-100 whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  Fix Connection
+                  Retry Sync
                 </button>
               </div>
             )}
@@ -1204,40 +1042,6 @@ export default function App() {
                   />
                 )}
 
-                {activeView === 'setup' && (
-                  <div className="space-y-6">
-                    <div>
-                      <h1 className="text-2xl font-bold tracking-tight text-white">
-                        Google Sheet & Vercel Setup
-                      </h1>
-                      <p className="text-sm text-slate-400 mt-1">
-                        Connect your live SK Pack Film Google Sheet (all 3 tabs simultaneously) and deploy to Vercel or AI Studio
-                      </p>
-                    </div>
-
-                    <SheetSetupView
-                      connection={connection}
-                      user={user}
-                      needsAuth={needsAuth}
-                      isLoggingIn={isLoggingIn}
-                      isSyncing={isSyncing}
-                      errorMessage={syncError}
-                      onGoogleLogin={handleGoogleLogin}
-                      onGoogleLogout={handleGoogleLogout}
-                      onConnectPublicSheet={(
-                        url,
-                        tab,
-                        dailyTab,
-                        monthlyTab
-                      ) =>
-                        loadPublicSheet(url, tab, true, dailyTab, monthlyTab)
-                      }
-                      onFetchPrivateTabs={handleFetchPrivateTabs}
-                      onLoadPrivateTab={loadPrivateTab}
-                      onLoadSampleData={handleLoadSampleData}
-                    />
-                  </div>
-                )}
               </motion.div>
             </AnimatePresence>
           </main>
