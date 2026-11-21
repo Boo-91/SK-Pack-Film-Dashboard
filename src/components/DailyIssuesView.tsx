@@ -13,6 +13,7 @@ import {
   getCurrentYearMonth,
   getIssueYearMonth,
 } from '../lib/issuesParser';
+import { CosmicDonutChart, CosmicTrendBarChart } from './CosmicCharts';
 
 const SEVERITY_ORDER: IssueSeverity[] = ['Major', 'Minor', 'Other'];
 
@@ -21,26 +22,30 @@ const SEVERITY_META: Record<
   {
     label: string;
     color: string;
+    highlightColor: string;
     textClass: string;
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
   Major: {
     label: 'Major',
-    color: '#F87171',
-    textClass: 'text-red-400',
+    color: '#FB7185',
+    highlightColor: '#FDA4AF',
+    textClass: 'text-rose-400',
     icon: AlertTriangle,
   },
   Minor: {
     label: 'Minor (Miner)',
     color: '#FBBF24',
-    textClass: 'text-amber-400',
+    highlightColor: '#FDE68A',
+    textClass: 'text-amber-300',
     icon: Info,
   },
   Other: {
     label: 'Other',
     color: '#38BDF8',
-    textClass: 'text-sky-400',
+    highlightColor: '#7DD3FC',
+    textClass: 'text-sky-300',
     icon: CheckCircle2,
   },
 };
@@ -112,7 +117,6 @@ export function DailyIssuesView({
       { key: string; label: string; year: number; month: number; count: number }
     >();
 
-    // Always keep current month option first even if no issues are logged yet
     map.set(currentMonthInfo.key, {
       key: currentMonthInfo.key,
       label: currentMonthInfo.label,
@@ -314,30 +318,50 @@ export function DailyIssuesView({
 
   const maxDailyTrendQty = Math.max(1, ...dailyTrend.map((d) => d.totalQty));
 
-  // Severity Donut
+  // Severity Donut & Trend Chart Data
   const activeSeverities = SEVERITY_ORDER.filter((sev) =>
     scopedForVisuals.some((r) => r.severity === sev)
   );
-  const radius = 64;
-  const circumference = 2 * Math.PI * radius;
-  let cumulativeOffset = 0;
-  const donutSegments = activeSeverities.map((sev) => {
+  const severityDonutSegments = activeSeverities.map((sev) => {
     const matching = scopedForVisuals.filter((r) => r.severity === sev);
     const count = matching.length;
     const qty = matching.reduce((s, r) => s + r.qtyError, 0);
-    const ratio = totalCases > 0 ? count / totalCases : 0;
-    const segmentLength = ratio * circumference;
-    const dashOffset = -cumulativeOffset;
-    cumulativeOffset += segmentLength;
     return {
-      severity: sev,
+      id: sev,
+      label: SEVERITY_META[sev].label,
+      subLabel: `${qty.toLocaleString()} error qty`,
       count,
-      qty,
-      segmentLength,
-      dashOffset,
+      valueText: `${count} (${qty}q)`,
       color: SEVERITY_META[sev].color,
+      highlightColor: SEVERITY_META[sev].highlightColor,
     };
   });
+
+  const dailyErrorTrendItems = dailyTrend.map((day) => ({
+    id: day.dateLabel,
+    axisLabel: day.dateLabel,
+    headerTitle: day.dateLabel,
+    headerSub: `${day.cases} logged ${day.cases === 1 ? 'case' : 'cases'}`,
+    totalValue: day.totalQty,
+    segments: [
+      {
+        key: 'minor',
+        label: 'Minor / Other',
+        value: day.minorQty,
+        gradientClass: 'bg-gradient-to-t from-amber-500/85 via-amber-400 to-amber-200',
+        swatchClass: 'bg-amber-300',
+        glowColor: 'rgba(252, 211, 77, 0.65)',
+      },
+      {
+        key: 'major',
+        label: 'Major',
+        value: day.majorQty,
+        gradientClass: 'bg-gradient-to-t from-rose-500/85 via-rose-400 to-rose-300',
+        swatchClass: 'bg-rose-400',
+        glowColor: 'rgba(251, 113, 133, 0.7)',
+      },
+    ],
+  }));
 
   const tableTotals = filteredRecords.reduce(
     (acc, r) => {
@@ -416,13 +440,15 @@ export function DailyIssuesView({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-[#F2E9FF]">
             Daily Internal Issues
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[#D1B8FF]/70 mt-1">
             {activeMonthLabel}
-            {selectedMonthKey === currentMonthInfo.key ? ' (Current Month)' : ''} · Internal quality defect log across production lines ·{' '}
-            {sourceLabel}
+            {selectedMonthKey === currentMonthInfo.key
+              ? ' (Current Month)'
+              : ''}{' '}
+            · Internal quality defect log across production lines · {sourceLabel}
           </p>
         </div>
 
@@ -435,7 +461,7 @@ export function DailyIssuesView({
               setConditionFilter('All');
             }}
             aria-label="Select month"
-            className="h-9 px-3 text-xs font-medium bg-[#0C172B] border border-[#1E3154] rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+            className="h-9 px-3 text-xs font-medium glass-control rounded-lg cursor-pointer"
           >
             {availableMonthOptions.map((opt) => (
               <option key={opt.key} value={opt.key}>
@@ -451,7 +477,7 @@ export function DailyIssuesView({
             <button
               type="button"
               onClick={resetFilters}
-              className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
+              className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] transition-colors cursor-pointer"
             >
               Reset to Current Month
             </button>
@@ -465,122 +491,136 @@ export function DailyIssuesView({
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-[#0C172B] border border-[#1B2B48] rounded-xl p-5 h-28 animate-pulse"
+              className="glass-panel rounded-2xl p-5 h-28 animate-pulse"
             />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <motion.div
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="glass-panel-interactive rounded-2xl p-5"
           >
-            <p className="text-xs font-medium text-slate-400">
+            <p className="text-xs font-medium text-[#D1B8FF]/70">
               Total Qty&apos;s Error
             </p>
             <div className="mt-2 flex items-baseline justify-between gap-2">
-              <span className="text-2xl font-semibold tracking-tight text-red-400 font-mono tabular-nums">
+              <span className="text-2xl font-semibold tracking-tight text-rose-400 font-mono tabular-nums">
                 {totalQtyError.toLocaleString()}
               </span>
-              <span className="text-xs font-medium text-slate-400 font-mono tabular-nums">
+              <span className="text-xs font-medium text-[#D1B8FF]/65 font-mono tabular-nums">
                 {totalCases > 0
                   ? `${(totalQtyError / totalCases).toFixed(1)} avg/case`
                   : '0'}
               </span>
             </div>
-            <div className="mt-2.5 h-1.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-red-400 transition-all duration-300"
-                style={{
+            <div className="mt-2.5 h-1.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{
                   width: `${
                     totalQtyError > 0 ? (majorQty / totalQtyError) * 100 : 0
                   }%`,
                 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full rounded-full bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.65)]"
               />
             </div>
-            <p className="mt-2 text-xs text-slate-400 font-mono tabular-nums">
+            <p className="mt-2 text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
               Major: {majorQty} · Minor: {minorQty}
             </p>
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
+            className="glass-panel-interactive rounded-2xl p-5"
           >
-            <p className="text-xs font-medium text-slate-400">
+            <p className="text-xs font-medium text-[#D1B8FF]/70">
               Total Issue Cases
             </p>
             <div className="mt-2 flex items-baseline justify-between gap-2">
-              <span className="text-2xl font-semibold tracking-tight text-slate-100 font-mono tabular-nums">
+              <span className="text-2xl font-semibold tracking-tight text-[#F2E9FF] font-mono tabular-nums">
                 {totalCases.toLocaleString()}
               </span>
-              <span className="text-xs font-medium text-sky-400 font-mono tabular-nums">
+              <span className="text-xs font-medium text-[#D1B8FF] font-mono tabular-nums">
                 {generalSharePct}% General
               </span>
             </div>
-            <div className="mt-2.5 h-1.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${generalSharePct}%` }}
+            <div className="mt-2.5 h-1.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${generalSharePct}%` }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full rounded-full bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8] shadow-[0_0_10px_rgba(157,113,232,0.75)]"
               />
             </div>
-            <p className="mt-2 text-xs text-slate-400 font-mono tabular-nums">
+            <p className="mt-2 text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
               General: {generalCasesCount} · Trade: {tradeCasesCount}
             </p>
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+            className="glass-panel-interactive rounded-2xl p-5"
           >
-            <p className="text-xs font-medium text-slate-400">
+            <p className="text-xs font-medium text-[#D1B8FF]/70">
               Major Severity Share
             </p>
             <div className="mt-2 flex items-baseline justify-between gap-2">
-              <span className="text-2xl font-semibold tracking-tight text-amber-400 font-mono tabular-nums">
+              <span className="text-2xl font-semibold tracking-tight text-amber-300 font-mono tabular-nums">
                 {majorCasePct}%
               </span>
-              <span className="text-xs text-slate-400 font-mono tabular-nums">
+              <span className="text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
                 {majorCases.length} / {totalCases} cases
               </span>
             </div>
-            <div className="mt-2.5 h-1.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-400 transition-all duration-300"
-                style={{ width: `${majorCasePct}%` }}
+            <div className="mt-2.5 h-1.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/10 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${majorCasePct}%` }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.65)]"
               />
             </div>
-            <p className="mt-2 text-xs text-slate-400 font-mono tabular-nums">
+            <p className="mt-2 text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
               {minorCases.length} Minor ({minorQty} qty) logged
             </p>
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            className="glass-panel-interactive rounded-2xl p-5"
           >
-            <p className="text-xs font-medium text-slate-400">
-              Top Line & Error Case
+            <p className="text-xs font-medium text-[#D1B8FF]/70">
+              Top Line &amp; Error Case
             </p>
             <div className="mt-2 flex items-baseline justify-between gap-2">
-              <span className="text-xl font-semibold tracking-tight text-slate-100 truncate">
+              <span className="text-xl font-semibold tracking-tight text-[#F2E9FF] truncate">
                 {topLine ? topLine.line : '—'}
               </span>
-              <span className="text-xs text-red-400 font-mono tabular-nums shrink-0">
+              <span className="text-xs text-rose-400 font-mono tabular-nums shrink-0">
                 {topLine ? `${topLine.qtyError} qty` : '0 qty'}
               </span>
             </div>
-            <p className="mt-3 text-xs text-slate-300 truncate">
+            <p className="mt-3 text-xs text-[#D1B8FF]/80 truncate">
               Top Issue:{' '}
-              <span className="text-sky-400 font-medium">
+              <span className="text-[#D1B8FF] font-medium">
                 {topErrorCase ? topErrorCase.errorCase : '—'}
               </span>
               {topErrorCase && (
-                <span className="text-slate-400 font-mono">
+                <span className="text-[#D1B8FF]/65 font-mono">
                   {' '}
                   ({topErrorCase.qtyError})
                 </span>
@@ -592,13 +632,13 @@ export function DailyIssuesView({
 
       {/* Primary Visuals Row: Severity Donut + Line Breakdown Progress Bars */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-5 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        <section className="lg:col-span-5 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Case Severity Breakdown
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
                 Click a severity row to filter the issues log
               </p>
             </div>
@@ -606,143 +646,68 @@ export function DailyIssuesView({
               <button
                 type="button"
                 onClick={() => setSeverityFilter('All')}
-                className="text-xs font-medium text-sky-400 hover:text-sky-300 cursor-pointer"
+                className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] cursor-pointer"
               >
                 Reset
               </button>
             )}
           </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
-              <svg
-                viewBox="0 0 160 160"
-                className="w-40 h-40 -rotate-90"
-                role="img"
-                aria-label="Issue severity breakdown ring chart"
-              >
-                <circle
-                  cx="80"
-                  cy="80"
-                  r={radius}
-                  fill="none"
-                  stroke="#13223D"
-                  strokeWidth="18"
-                />
-                {totalCases > 0 &&
-                  donutSegments.map((seg) =>
-                    seg.segmentLength > 0 ? (
-                      <circle
-                        key={seg.severity}
-                        cx="80"
-                        cy="80"
-                        r={radius}
-                        fill="none"
-                        stroke={seg.color}
-                        strokeWidth="18"
-                        strokeDasharray={`${seg.segmentLength} ${circumference}`}
-                        strokeDashoffset={seg.dashOffset}
-                        opacity={
-                          severityFilter === 'All' ||
-                          severityFilter === seg.severity
-                            ? 1
-                            : 0.22
-                        }
-                        className="transition-opacity duration-150 cursor-pointer hover:opacity-90"
-                        onClick={() =>
-                          setSeverityFilter(
-                            severityFilter === seg.severity
-                              ? 'All'
-                              : seg.severity
-                          )
-                        }
-                      />
-                    ) : null
-                  )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-semibold text-slate-100 font-mono tabular-nums">
-                  {totalCases}
-                </span>
-                <span className="text-xs text-slate-400">Cases</span>
-              </div>
-            </div>
-
-            <div className="w-full divide-y divide-[#162542]">
-              {donutSegments.map((seg) => {
-                const isSelected = severityFilter === seg.severity;
-                const pct =
-                  totalCases > 0
-                    ? Math.round((seg.count / totalCases) * 100)
-                    : 0;
-                return (
-                  <button
-                    key={seg.severity}
-                    type="button"
-                    onClick={() =>
-                      setSeverityFilter(isSelected ? 'All' : seg.severity)
-                    }
-                    className={`w-full py-2.5 px-2.5 flex items-center justify-between gap-3 text-left rounded-md transition-all duration-150 cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#162849]'
-                        : 'hover:bg-[#12203B] hover:translate-x-0.5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className="w-2.5 h-2.5 rounded-xs shrink-0"
-                        style={{ backgroundColor: seg.color }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-sm font-medium text-slate-200 truncate">
-                        {SEVERITY_META[seg.severity].label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 font-mono tabular-nums">
-                      <span className="text-sm font-semibold text-slate-100">
-                        {seg.count} ({seg.qty}q)
-                      </span>
-                      <span className="text-xs text-slate-400 w-9 text-right">
-                        {pct}%
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <CosmicDonutChart
+            segments={severityDonutSegments}
+            totalCount={totalCases}
+            totalLabel="Cases"
+            activeFilter={severityFilter}
+            onSelect={(id) => setSeverityFilter(id as IssueSeverity | 'All')}
+            ariaLabel="Issue severity breakdown ring chart"
+          />
         </section>
 
-        {/* Line (User) Progress Bars */}
-        <section className="lg:col-span-7 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        {/* Line (User) Segmented Severity Bars */}
+        <section className="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Issues by Production Line (User)
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Error quantity and case count per line · Click a line to filter
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
+                Major vs. Minor quantity per line · Click a line to filter
               </p>
             </div>
-            {lineFilter !== 'All' && (
-              <button
-                type="button"
-                onClick={() => setLineFilter('All')}
-                className="text-xs font-medium text-sky-400 hover:text-sky-300 cursor-pointer"
-              >
-                All Lines
-              </button>
-            )}
+            <div className="flex items-center gap-4 text-xs text-[#D1B8FF]/70">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.65)]" />
+                <span>Major</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9D71E8] shadow-[0_0_8px_rgba(157,113,232,0.75)]" />
+                <span>Minor / Other</span>
+              </span>
+              {lineFilter !== 'All' && (
+                <button
+                  type="button"
+                  onClick={() => setLineFilter('All')}
+                  className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] cursor-pointer"
+                >
+                  All Lines
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="mt-5 space-y-3">
             {lineBreakdown.length === 0 ? (
-              <p className="text-sm text-slate-400 py-8 text-center">
+              <p className="text-sm text-[#D1B8FF]/65 py-8 text-center">
                 No line issues found for current filters.
               </p>
             ) : (
               lineBreakdown.map((item) => {
                 const widthPct = (item.qtyError / maxLineQty) * 100;
+                const majorShareOfBar =
+                  item.qtyError > 0
+                    ? (item.majorQty / item.qtyError) * 100
+                    : 0;
+                const minorShareOfBar = Math.max(0, 100 - majorShareOfBar);
                 const sharePct =
                   totalQtyError > 0
                     ? Math.round((item.qtyError / totalQtyError) * 1000) / 10
@@ -755,25 +720,44 @@ export function DailyIssuesView({
                     onClick={() =>
                       setLineFilter(isSelected ? 'All' : item.line)
                     }
-                    className={`w-full text-left p-2.5 -mx-2.5 rounded-lg transition-all duration-150 cursor-pointer ${
-                      isSelected ? 'bg-[#162849]' : 'hover:bg-[#12203B]'
+                    className={`w-full text-left p-2.5 -mx-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#6A2FC8]/30 ring-1 ring-[#9D71E8]/55'
+                        : 'hover:bg-[#6A2FC8]/15'
                     }`}
                   >
                     <div className="flex items-baseline justify-between gap-2 text-xs mb-1.5">
-                      <span className="font-medium text-slate-100">
+                      <span className="font-medium text-[#F2E9FF]">
                         {item.line}
                       </span>
-                      <span className="font-mono tabular-nums text-slate-300">
-                        <strong className="text-white">{item.qtyError}</strong>{' '}
+                      <span className="font-mono tabular-nums text-[#D1B8FF]/80">
+                        <strong className="text-[#F2E9FF]">
+                          {item.qtyError}
+                        </strong>{' '}
                         qty ({item.cases} {item.cases === 1 ? 'case' : 'cases'}{' '}
                         · {sharePct}%)
                       </span>
                     </div>
-                    <div className="h-2 w-full bg-[#13223D] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                        style={{ width: `${widthPct}%` }}
-                      />
+                    <div className="h-2.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/12 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${widthPct}%` }}
+                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        className="h-full rounded-full overflow-hidden flex shadow-[0_0_12px_rgba(157,113,232,0.55)]"
+                      >
+                        {item.majorQty > 0 && (
+                          <div
+                            className="h-full bg-gradient-to-r from-rose-500 to-rose-400"
+                            style={{ width: `${majorShareOfBar}%` }}
+                          />
+                        )}
+                        {minorShareOfBar > 0 && (
+                          <div
+                            className="h-full bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8]"
+                            style={{ width: `${minorShareOfBar}%` }}
+                          />
+                        )}
+                      </motion.div>
                     </div>
                   </button>
                 );
@@ -785,102 +769,56 @@ export function DailyIssuesView({
 
       {/* Secondary Row: Daily Error Trend Bar Chart + Top Error Cases */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-7 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        <section className="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Daily Internal Error Trend
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
                 Last {dailyTrend.length} active issue dates · Hover a bar for exact counts
               </p>
             </div>
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-4 text-xs text-[#D1B8FF]/70">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-red-400" />
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.65)]" />
                 <span>Major</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-amber-400" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.65)]" />
                 <span>Minor</span>
               </span>
             </div>
           </div>
 
-          <div className="mt-6">
-            {dailyTrend.length === 0 ? (
-              <p className="text-sm text-slate-400 py-10 text-center">
-                No trend data for current filter.
-              </p>
-            ) : (
-              <div className="h-44 flex items-end gap-1.5 sm:gap-2 pt-4 border-b border-[#1B2B48]">
-                {dailyTrend.map((day) => {
-                  const totalH = (day.totalQty / maxDailyTrendQty) * 100;
-                  const majorShare =
-                    day.totalQty > 0 ? (day.majorQty / day.totalQty) * 100 : 0;
-                  const minorShare = 100 - majorShare;
-                  return (
-                    <div
-                      key={day.dateLabel}
-                      className="flex-1 min-w-0 h-full flex flex-col justify-end items-center group"
-                      title={`${day.dateLabel}: ${day.totalQty} error qty (${day.cases} cases · Major ${day.majorQty}, Minor ${day.minorQty})`}
-                    >
-                      <span className="text-[10px] font-mono tabular-nums text-slate-300 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        {day.totalQty}
-                      </span>
-                      <div
-                        className="w-full max-w-[22px] rounded-t-sm overflow-hidden flex flex-col justify-end bg-[#13223D] group-hover:scale-x-110 transition-transform duration-150"
-                        style={{ height: `${Math.max(8, totalH)}%` }}
-                      >
-                        {day.minorQty > 0 && (
-                          <div
-                            className="w-full bg-amber-400"
-                            style={{ height: `${minorShare}%` }}
-                          />
-                        )}
-                        {day.majorQty > 0 && (
-                          <div
-                            className="w-full bg-red-400"
-                            style={{ height: `${majorShare}%` }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {dailyTrend.length > 0 && (
-              <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span>{dailyTrend[0].dateLabel}</span>
-                <span>
-                  Peak: {Math.max(...dailyTrend.map((d) => d.totalQty))} qty
-                </span>
-                <span>{dailyTrend[dailyTrend.length - 1].dateLabel}</span>
-              </div>
-            )}
-          </div>
+          <CosmicTrendBarChart
+            items={dailyErrorTrendItems}
+            maxValue={maxDailyTrendQty}
+            unitLabel="qty"
+            emptyMessage="No trend data for current filter."
+            heightClass="h-44"
+          />
         </section>
 
-        <section className="lg:col-span-5 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6">
-          <h2 className="text-base font-semibold text-slate-100">
+        <section className="lg:col-span-5 glass-panel rounded-2xl p-6">
+          <h2 className="text-base font-semibold text-[#F2E9FF]">
             Error Case Ranking
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
             Breakdown by defect type across {totalCases} logged cases
           </p>
 
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#1B2B48] text-xs font-medium text-slate-400">
+                <tr className="border-b border-[#D1B8FF]/16 text-xs font-medium text-[#D1B8FF]/70">
                   <th className="py-2 pr-3 font-medium">Error Case</th>
                   <th className="py-2 px-3 font-medium text-right">Cases</th>
                   <th className="py-2 px-3 font-medium text-right">Qty</th>
                   <th className="py-2 pl-3 font-medium text-right">Share</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#162542] text-sm">
+              <tbody className="divide-y divide-[#D1B8FF]/10 text-sm">
                 {errorCaseBreakdown.map((item) => {
                   const pct =
                     totalQtyError > 0
@@ -890,18 +828,18 @@ export function DailyIssuesView({
                     <tr
                       key={item.errorCase}
                       onClick={() => setSearchQuery(item.errorCase)}
-                      className="h-9 hover:bg-[#12203B] transition-colors duration-150 cursor-pointer"
+                      className="h-9 hover:bg-[#6A2FC8]/18 transition-colors duration-150 cursor-pointer"
                     >
-                      <td className="py-1.5 pr-3 font-medium text-slate-200 truncate max-w-[180px]">
+                      <td className="py-1.5 pr-3 font-medium text-[#F2E9FF]/90 truncate max-w-[180px]">
                         {item.errorCase}
                       </td>
-                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-slate-400">
+                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/65">
                         {item.cases}
                       </td>
-                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-slate-100 font-semibold">
+                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-[#F2E9FF] font-semibold">
                         {item.qtyError}
                       </td>
-                      <td className="py-1.5 pl-3 text-right font-mono tabular-nums text-sky-400">
+                      <td className="py-1.5 pl-3 text-right font-mono tabular-nums text-[#D1B8FF]">
                         {pct}%
                       </td>
                     </tr>
@@ -914,14 +852,14 @@ export function DailyIssuesView({
       </div>
 
       {/* Interactive Table */}
-      <section className="bg-[#0C172B] border border-[#1B2B48] rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-[#1B2B48] space-y-4">
+      <section className="glass-panel rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-[#D1B8FF]/14 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Daily Internal Issues Log
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono tabular-nums">
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5 font-mono tabular-nums">
                 Showing {filteredRecords.length}{' '}
                 {filteredRecords.length === 1 ? 'case' : 'cases'} ·{' '}
                 {tableTotals.qtyError.toLocaleString()} error qty
@@ -932,7 +870,7 @@ export function DailyIssuesView({
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-[#13223D] hover:bg-[#1A2E52] rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] bg-[#6A2FC8]/25 hover:bg-[#6A2FC8]/40 border border-[#9D71E8]/30 rounded-lg transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   <span>Clear Filters</span>
@@ -942,15 +880,15 @@ export function DailyIssuesView({
                 type="button"
                 onClick={handleExportCsv}
                 disabled={filteredRecords.length === 0}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-200 bg-[#111F38] border border-[#223659] hover:bg-[#172A4A] hover:border-[#2E4975] disabled:opacity-50 rounded-lg transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium glass-control disabled:opacity-50 rounded-lg cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5 text-[#D1B8FF]" />
                 <span>Download CSV</span>
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#081020] border border-[#162542] rounded-lg w-fit">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#0B0720]/70 border border-[#D1B8FF]/14 rounded-xl w-fit">
             {(['All', 'Major', 'Minor'] as const).map((sev) => {
               const active = severityFilter === sev;
               return (
@@ -958,17 +896,17 @@ export function DailyIssuesView({
                   key={sev}
                   type="button"
                   onClick={() => setSeverityFilter(sev)}
-                  className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 cursor-pointer ${
+                  className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 cursor-pointer ${
                     active
-                      ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-100'
+                      ? 'text-[#F2E9FF]'
+                      : 'text-[#D1B8FF]/65 hover:text-[#F2E9FF]'
                   }`}
                 >
                   {active && (
                     <motion.span
                       layoutId="dailyIssueSeverityPill"
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute inset-0 bg-blue-600 rounded-md"
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      className="absolute inset-0 bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8]/90 rounded-lg shadow-[0_0_18px_-4px_rgba(106,47,200,0.8)]"
                     />
                   )}
                   <span className="relative z-10">
@@ -981,14 +919,14 @@ export function DailyIssuesView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
             <div className="lg:col-span-4 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#9D71E8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search TPK no., error case, line, remark..."
                 aria-label="Search internal issues"
-                className="w-full h-10 pl-9 pr-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                className="w-full h-10 pl-9 pr-3 text-sm glass-control rounded-lg placeholder:text-[#D1B8FF]/40"
               />
             </div>
 
@@ -1001,7 +939,7 @@ export function DailyIssuesView({
                   setConditionFilter('All');
                 }}
                 aria-label="Filter by Month"
-                className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
               >
                 {availableMonthOptions.map((opt) => (
                   <option key={opt.key} value={opt.key}>
@@ -1019,7 +957,7 @@ export function DailyIssuesView({
                 value={lineFilter}
                 onChange={(e) => setLineFilter(e.target.value)}
                 aria-label="Filter by Line"
-                className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
               >
                 <option value="All">All Lines (Users)</option>
                 {availableLines.map((l) => (
@@ -1035,7 +973,7 @@ export function DailyIssuesView({
                 value={conditionFilter}
                 onChange={(e) => setConditionFilter(e.target.value)}
                 aria-label="Filter by Condition"
-                className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
               >
                 <option value="All">All Conditions</option>
                 {availableConditions.map((c) => (
@@ -1053,7 +991,7 @@ export function DailyIssuesView({
                   setSortBy(e.target.value as 'date' | 'qty' | 'line')
                 }
                 aria-label="Sort internal issues"
-                className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
               >
                 <option value="date">Sort: Latest Date</option>
                 <option value="qty">Sort: Highest Qty</option>
@@ -1065,10 +1003,10 @@ export function DailyIssuesView({
 
         {filteredRecords.length === 0 ? (
           <div className="px-6 py-14 text-center">
-            <p className="text-sm font-medium text-slate-100">
+            <p className="text-sm font-medium text-[#F2E9FF]">
               No issue rows match the current filter
             </p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-[#D1B8FF]/65 mt-1">
               Adjust your search, line, or severity filter.
             </p>
           </div>
@@ -1077,7 +1015,7 @@ export function DailyIssuesView({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#091224] border-b border-[#1B2B48] text-xs font-medium text-slate-400 whitespace-nowrap">
+                  <tr className="bg-[#0B0720]/65 border-b border-[#D1B8FF]/14 text-xs font-medium text-[#D1B8FF]/70 whitespace-nowrap">
                     <th className="py-2.5 pl-5 pr-3 font-medium">Date</th>
                     <th className="py-2.5 px-3 font-medium">User</th>
                     <th className="py-2.5 px-3 font-medium">Error Case</th>
@@ -1094,33 +1032,33 @@ export function DailyIssuesView({
                     <th className="py-2.5 pl-3 pr-5 font-medium">Remark</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#162542] text-sm">
+                <tbody className="divide-y divide-[#D1B8FF]/10 text-sm">
                   {filteredRecords.map((row) => (
                     <tr
                       key={row.id}
                       onClick={() => setSelectedIssue(row)}
-                      className="h-10 hover:bg-[#13223D] transition-colors duration-150 cursor-pointer"
+                      className="h-10 hover:bg-[#6A2FC8]/18 transition-colors duration-150 cursor-pointer"
                     >
-                      <td className="py-2 pl-5 pr-3 font-mono text-xs text-slate-200 whitespace-nowrap">
+                      <td className="py-2 pl-5 pr-3 font-mono text-xs text-[#D1B8FF]/85 whitespace-nowrap">
                         {row.dateLabel}
                       </td>
-                      <td className="py-2 px-3 font-medium text-slate-100 whitespace-nowrap">
+                      <td className="py-2 px-3 font-medium text-[#F2E9FF] whitespace-nowrap">
                         {row.user}
                       </td>
-                      <td className="py-2 px-3 text-slate-200 whitespace-nowrap">
+                      <td className="py-2 px-3 text-[#F2E9FF]/90 whitespace-nowrap">
                         {row.errorCase}
                       </td>
                       <td
                         className={`py-2 px-3 text-right font-mono tabular-nums font-semibold whitespace-nowrap ${
-                          row.qtyError >= 4 ? 'text-red-400' : 'text-slate-100'
+                          row.qtyError >= 4 ? 'text-rose-400' : 'text-[#F2E9FF]'
                         }`}
                       >
                         {row.qtyError}
                       </td>
-                      <td className="py-2 px-3 text-center font-mono text-xs text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-3 text-center font-mono text-xs text-[#D1B8FF]/65 whitespace-nowrap">
                         {row.month}
                       </td>
-                      <td className="py-2 px-3 text-xs text-slate-300 whitespace-nowrap">
+                      <td className="py-2 px-3 text-xs text-[#D1B8FF]/80 whitespace-nowrap">
                         {row.condition}
                       </td>
                       <td className="py-2 px-3 whitespace-nowrap">
@@ -1129,31 +1067,31 @@ export function DailyIssuesView({
                           rawLabel={row.severityRaw}
                         />
                       </td>
-                      <td className="py-2 px-3 font-mono text-xs text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-3 font-mono text-xs text-[#D1B8FF]/65 whitespace-nowrap">
                         {row.year}
                       </td>
-                      <td className="py-2 px-3 font-mono text-xs text-sky-400 whitespace-nowrap">
+                      <td className="py-2 px-3 font-mono text-xs text-[#D1B8FF] whitespace-nowrap">
                         {row.tpkNo}
                       </td>
-                      <td className="py-2 pl-3 pr-5 text-xs text-slate-400 max-w-[220px] truncate">
+                      <td className="py-2 pl-3 pr-5 text-xs text-[#D1B8FF]/65 max-w-[220px] truncate">
                         {row.remark || '—'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-[#091224] border-t-2 border-[#223659] text-sm font-semibold">
-                    <td className="py-3 pl-5 pr-3 text-slate-100 whitespace-nowrap">
+                  <tr className="bg-[#0B0720]/70 border-t-2 border-[#9D71E8]/35 text-sm font-semibold">
+                    <td className="py-3 pl-5 pr-3 text-[#F2E9FF] whitespace-nowrap">
                       Total ({filteredRecords.length} cases)
                     </td>
-                    <td className="py-3 px-3 text-xs font-mono text-slate-400 whitespace-nowrap">
+                    <td className="py-3 px-3 text-xs font-mono text-[#D1B8FF]/60 whitespace-nowrap">
                       —
                     </td>
-                    <td className="py-3 px-3 text-xs font-mono text-sky-400 whitespace-nowrap">
+                    <td className="py-3 px-3 text-xs font-mono text-[#D1B8FF] whitespace-nowrap">
                       {tableTotals.majorCount} Major · {tableTotals.minorCount}{' '}
                       Minor
                     </td>
-                    <td className="py-3 px-3 text-right font-mono tabular-nums text-red-400 whitespace-nowrap">
+                    <td className="py-3 px-3 text-right font-mono tabular-nums text-rose-400 whitespace-nowrap">
                       {tableTotals.qtyError.toLocaleString()}
                     </td>
                     <td colSpan={6} className="py-3 px-3" />
@@ -1162,16 +1100,16 @@ export function DailyIssuesView({
               </table>
             </div>
 
-            <div className="md:hidden divide-y divide-[#162542]">
+            <div className="md:hidden divide-y divide-[#D1B8FF]/10">
               {filteredRecords.map((row) => (
                 <button
                   key={row.id}
                   type="button"
                   onClick={() => setSelectedIssue(row)}
-                  className="w-full p-4 text-left hover:bg-[#13223D] transition-colors cursor-pointer space-y-2"
+                  className="w-full p-4 text-left hover:bg-[#6A2FC8]/15 transition-colors cursor-pointer space-y-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-100">
+                    <span className="text-sm font-semibold text-[#F2E9FF]">
                       {row.errorCase}
                     </span>
                     <SeverityLabel
@@ -1179,30 +1117,32 @@ export function DailyIssuesView({
                       rawLabel={row.severityRaw}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
+                  <div className="flex items-center justify-between text-xs text-[#D1B8FF]/65 font-mono">
                     <span>
                       {row.dateLabel} · {row.user}
                     </span>
-                    <span className="text-red-400 font-semibold">
+                    <span className="text-rose-400 font-semibold">
                       Qty: {row.qtyError}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-mono text-sky-400">{row.tpkNo}</span>
+                  <div className="flex items-center justify-between text-xs text-[#D1B8FF]/65">
+                    <span className="font-mono text-[#D1B8FF]">
+                      {row.tpkNo}
+                    </span>
                     <span>{row.condition}</span>
                   </div>
                   {row.remark && (
-                    <p className="text-xs text-slate-300 truncate">
+                    <p className="text-xs text-[#D1B8FF]/80 truncate">
                       Remark: {row.remark}
                     </p>
                   )}
                 </button>
               ))}
-              <div className="p-4 bg-[#091224] border-t-2 border-[#223659] flex items-center justify-between text-xs font-mono">
-                <span className="font-semibold text-white">
+              <div className="p-4 bg-[#0B0720]/70 border-t-2 border-[#9D71E8]/35 flex items-center justify-between text-xs font-mono">
+                <span className="font-semibold text-[#F2E9FF]">
                   Total ({filteredRecords.length} cases)
                 </span>
-                <span className="font-semibold text-red-400">
+                <span className="font-semibold text-rose-400">
                   Qty Error: {tableTotals.qtyError}
                 </span>
               </div>
@@ -1219,8 +1159,8 @@ export function DailyIssuesView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              className="fixed inset-0 bg-[#02060F]/70 backdrop-blur-[2px]"
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 bg-[#0B0720]/75 backdrop-blur-sm"
               onClick={() => setSelectedIssue(null)}
               aria-hidden="true"
             />
@@ -1228,28 +1168,28 @@ export function DailyIssuesView({
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative z-10 w-full max-w-md bg-[#091224] border-l border-[#1B2B48] h-full overflow-y-auto p-6 flex flex-col justify-between"
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="relative z-10 w-full max-w-md glass-sidebar border-l border-[#D1B8FF]/18 h-full overflow-y-auto p-6 flex flex-col justify-between shadow-[-24px_0_64px_-16px_rgba(106,47,200,0.4)]"
               role="dialog"
               aria-label="Issue Detail"
             >
               <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#162542]">
+                <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#D1B8FF]/14">
                   <div>
-                    <p className="text-xs font-mono text-sky-400">
+                    <p className="text-xs font-mono text-[#D1B8FF]">
                       {selectedIssue.tpkNo}
                     </p>
-                    <h2 className="text-xl font-bold text-white mt-0.5">
+                    <h2 className="text-xl font-bold text-[#F2E9FF] mt-0.5">
                       {selectedIssue.errorCase}
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-[#D1B8FF]/65 mt-1">
                       {selectedIssue.dateLabel} · {selectedIssue.user}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setSelectedIssue(null)}
-                    className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-[#13223D] cursor-pointer"
+                    className="p-2 text-[#D1B8FF]/70 hover:text-[#F2E9FF] rounded-lg hover:bg-[#6A2FC8]/25 cursor-pointer"
                     aria-label="Close detail"
                   >
                     <X className="w-5 h-5" />
@@ -1257,14 +1197,16 @@ export function DailyIssuesView({
                 </div>
 
                 <dl className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="bg-[#0C172B] border border-[#1B2B48] rounded-lg p-3.5">
-                    <dt className="text-xs text-slate-400">Qty&apos;s Error</dt>
-                    <dd className="text-xl font-semibold text-red-400 font-mono tabular-nums mt-1">
+                  <div className="bg-[#25134D]/45 border border-[#D1B8FF]/14 rounded-xl p-3.5">
+                    <dt className="text-xs text-[#D1B8FF]/65">
+                      Qty&apos;s Error
+                    </dt>
+                    <dd className="text-xl font-semibold text-rose-400 font-mono tabular-nums mt-1">
                       {selectedIssue.qtyError}
                     </dd>
                   </div>
-                  <div className="bg-[#0C172B] border border-[#1B2B48] rounded-lg p-3.5">
-                    <dt className="text-xs text-slate-400">Case Severity</dt>
+                  <div className="bg-[#25134D]/45 border border-[#D1B8FF]/14 rounded-xl p-3.5">
+                    <dt className="text-xs text-[#D1B8FF]/65">Case Severity</dt>
                     <dd className="mt-1.5">
                       <SeverityLabel
                         severity={selectedIssue.severity}
@@ -1272,26 +1214,26 @@ export function DailyIssuesView({
                       />
                     </dd>
                   </div>
-                  <div className="bg-[#0C172B] border border-[#1B2B48] rounded-lg p-3.5">
-                    <dt className="text-xs text-slate-400">Condition</dt>
-                    <dd className="text-slate-100 font-medium mt-1">
+                  <div className="bg-[#25134D]/45 border border-[#D1B8FF]/14 rounded-xl p-3.5">
+                    <dt className="text-xs text-[#D1B8FF]/65">Condition</dt>
+                    <dd className="text-[#F2E9FF] font-medium mt-1">
                       {selectedIssue.condition}
                     </dd>
                   </div>
-                  <div className="bg-[#0C172B] border border-[#1B2B48] rounded-lg p-3.5">
-                    <dt className="text-xs text-slate-400">Month / Year</dt>
-                    <dd className="text-slate-100 font-mono mt-1">
+                  <div className="bg-[#25134D]/45 border border-[#D1B8FF]/14 rounded-xl p-3.5">
+                    <dt className="text-xs text-[#D1B8FF]/65">Month / Year</dt>
+                    <dd className="text-[#F2E9FF] font-mono mt-1">
                       {MONTH_NAMES[selectedIssue.month] || selectedIssue.month}{' '}
                       {selectedIssue.year}
                     </dd>
                   </div>
                 </dl>
 
-                <div className="bg-[#0C172B] border border-[#1B2B48] rounded-lg p-4">
-                  <p className="text-xs font-medium text-slate-400 mb-1.5">
+                <div className="bg-[#25134D]/45 border border-[#D1B8FF]/14 rounded-xl p-4">
+                  <p className="text-xs font-medium text-[#D1B8FF]/65 mb-1.5">
                     Remark
                   </p>
-                  <p className="text-sm text-slate-100">
+                  <p className="text-sm text-[#F2E9FF]">
                     {selectedIssue.remark || 'No remark recorded.'}
                   </p>
                 </div>
@@ -1300,7 +1242,7 @@ export function DailyIssuesView({
               <button
                 type="button"
                 onClick={() => setSelectedIssue(null)}
-                className="mt-6 w-full h-10 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors cursor-pointer"
+                className="mt-6 w-full h-10 text-sm font-medium rounded-lg btn-violet-glow cursor-pointer"
               >
                 Close
               </button>

@@ -1,6 +1,12 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { AlertCircle, BarChart3, CalendarRange, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import {
+  AlertCircle,
+  BarChart3,
+  CalendarRange,
+  LayoutDashboard,
+  ShieldCheck,
+} from 'lucide-react';
 import { ALLOWED_EMAIL_DOMAIN } from '../lib/googleAuth';
 
 interface LoginViewProps {
@@ -9,70 +15,97 @@ interface LoginViewProps {
   error: string | null;
 }
 
+const FEATURES = [
+  {
+    icon: LayoutDashboard,
+    title: 'Packing Capacity & QC Overview',
+    desc: 'Plan vs. input volume, finished output, and remaining rework across rolling 3-week windows.',
+  },
+  {
+    icon: CalendarRange,
+    title: '31-Day Log & Weekly Summary',
+    desc: 'Day-by-day capacity records with week and weekday breakdown filters.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Daily & Monthly Internal Issues',
+    desc: 'Quality issue inspection logs with current-month default filtering and monthly trend rollups.',
+  },
+];
+
 export function LoginView({ onSignIn, isLoading, error }: LoginViewProps) {
   return (
-    <div className="min-h-screen bg-[#060D1A] text-slate-100 flex items-center justify-center p-4 sm:p-8">
+    <div className="min-h-screen cosmic-stage text-[#F2E9FF] relative overflow-hidden flex items-center justify-center p-4 sm:p-8">
+      {/* Ambient Cosmic Glow Orbs */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[#6A2FC8]/25 blur-[120px]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-36 -right-24 w-[460px] h-[460px] rounded-full bg-[#9D71E8]/20 blur-[130px]"
+      />
+
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 bg-[#091224] border border-[#1B2B48] rounded-2xl overflow-hidden"
+        initial={{ opacity: 0, y: 14, scale: 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 glass-panel rounded-2xl overflow-hidden"
       >
+        {/* Top Luminous Hairline */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D1B8FF]/50 to-transparent"
+        />
+
         {/* Left Context Column */}
-        <div className="lg:col-span-7 p-7 sm:p-10 flex flex-col justify-between gap-8 border-b lg:border-b-0 lg:border-r border-[#162542]">
+        <div className="lg:col-span-7 p-7 sm:p-10 flex flex-col justify-between gap-8 border-b lg:border-b-0 lg:border-r border-[#D1B8FF]/12">
           <div className="space-y-6">
             <div>
-              <p className="text-xs font-medium text-sky-400 tracking-wide">
+              <p className="text-xs font-medium text-[#D1B8FF] tracking-wide">
                 SK Pack Film Department
               </p>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1.5 text-balance">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#F2E9FF] mt-1.5 text-balance">
                 Insight Dashboard
               </h1>
-              <p className="text-sm text-slate-400 mt-3 leading-relaxed max-w-md">
+              <p className="text-sm text-[#D1B8FF]/70 mt-3 leading-relaxed max-w-md">
                 Production capacity tracking, daily operational logs, and internal quality issue reporting synced directly from department sheets.
               </p>
             </div>
 
-            <div className="pt-4 border-t border-[#162542] space-y-3.5">
-              <div className="flex items-start gap-3">
-                <LayoutDashboard className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-slate-100">
-                    Packing Capacity &amp; QC Overview
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Plan vs. input volume, finished output, and remaining rework across rolling 3-week windows.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <CalendarRange className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-slate-100">
-                    31-Day Log &amp; Weekly Summary
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Day-by-day capacity records with week and weekday breakdown filters.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <BarChart3 className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-slate-100">
-                    Daily &amp; Monthly Internal Issues
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Quality issue inspection logs with current-month default filtering and monthly trend rollups.
-                  </p>
-                </div>
-              </div>
+            <div className="pt-5 border-t border-[#D1B8FF]/12 space-y-4">
+              {FEATURES.map((feat, idx) => {
+                const Icon = feat.icon;
+                return (
+                  <motion.div
+                    key={feat.title}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      duration: 0.24,
+                      delay: 0.06 + idx * 0.05,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className="flex items-start gap-3.5"
+                  >
+                    <div className="p-2 rounded-lg bg-[#6A2FC8]/25 border border-[#9D71E8]/30 shadow-[0_0_16px_-4px_rgba(157,113,232,0.5)] shrink-0">
+                      <Icon className="w-4 h-4 text-[#D1B8FF]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[#F2E9FF]">
+                        {feat.title}
+                      </p>
+                      <p className="text-xs text-[#D1B8FF]/65 mt-0.5 leading-relaxed">
+                        {feat.desc}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="text-xs text-slate-400 flex items-center gap-2 pt-2">
+          <div className="text-xs text-[#D1B8FF]/60 flex items-center gap-2 pt-2">
             <span>Packing Operations</span>
             <span aria-hidden="true">·</span>
             <span>Quality Control</span>
@@ -82,28 +115,35 @@ export function LoginView({ onSignIn, isLoading, error }: LoginViewProps) {
         </div>
 
         {/* Right Sign-In Column */}
-        <div className="lg:col-span-5 p-7 sm:p-10 flex flex-col justify-center bg-[#070F1F] space-y-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-sky-400">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
+        <div className="lg:col-span-5 p-7 sm:p-10 flex flex-col justify-center bg-[#0B0720]/45 backdrop-blur-xl space-y-6">
+          <div className="space-y-2.5">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#D1B8FF]">
+              <ShieldCheck className="w-4 h-4 text-[#9D71E8] shrink-0" />
               <span>@{ALLOWED_EMAIL_DOMAIN} Only</span>
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-tight text-[#F2E9FF]">
               Company Google Sign-In
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Sign in using your <span className="font-mono text-slate-200">@{ALLOWED_EMAIL_DOMAIN}</span> Google account. No separate password is required. External accounts are not permitted.
+            <p className="text-xs sm:text-sm text-[#D1B8FF]/70 leading-relaxed">
+              Sign in using your{' '}
+              <span className="font-mono text-[#F2E9FF]">
+                @{ALLOWED_EMAIL_DOMAIN}
+              </span>{' '}
+              Google account. No separate password is required. External accounts are not permitted.
             </p>
           </div>
 
           {error && (
-            <div
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18 }}
               role="alert"
-              className="bg-red-950/50 border border-red-800/60 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-red-200 leading-relaxed"
+              className="bg-rose-950/50 backdrop-blur-md border border-rose-400/35 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-rose-100 leading-relaxed shadow-[0_0_24px_-8px_rgba(244,63,94,0.45)]"
             >
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
               <span>{error}</span>
-            </div>
+            </motion.div>
           )}
 
           <div className="space-y-3">
@@ -146,8 +186,12 @@ export function LoginView({ onSignIn, isLoading, error }: LoginViewProps) {
             </button>
           </div>
 
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Restricted to authorized <span className="font-mono text-slate-400">@{ALLOWED_EMAIL_DOMAIN}</span> team members.
+          <p className="text-[11px] text-[#D1B8FF]/55 leading-relaxed">
+            Restricted to authorized{' '}
+            <span className="font-mono text-[#D1B8FF]/80">
+              @{ALLOWED_EMAIL_DOMAIN}
+            </span>{' '}
+            team members.
           </p>
         </div>
       </motion.div>

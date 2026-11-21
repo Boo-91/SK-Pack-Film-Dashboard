@@ -148,15 +148,15 @@ export function PackingQueueTable({
       row.dateSortKey === todayStart);
 
   return (
-    <section className="bg-[#0C172B] border border-[#1B2B48] rounded-xl overflow-hidden">
+    <section className="glass-panel rounded-2xl overflow-hidden">
       {/* Toolbar */}
-      <div className="p-5 border-b border-[#1B2B48] space-y-4">
+      <div className="p-5 border-b border-[#D1B8FF]/14 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-100">
+            <h2 className="text-base font-semibold text-[#F2E9FF]">
               Daily Packing Capacity Log
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5 font-mono tabular-nums">
+            <p className="text-xs text-[#D1B8FF]/65 mt-0.5 font-mono tabular-nums">
               Showing {records.length} {records.length === 1 ? 'day' : 'days'}
               {windowDescription ? ` · ${windowDescription}` : ''}
             </p>
@@ -167,7 +167,7 @@ export function PackingQueueTable({
               <button
                 type="button"
                 onClick={onResetFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-[#13223D] hover:bg-[#1A2E52] rounded-lg transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] bg-[#6A2FC8]/25 hover:bg-[#6A2FC8]/40 border border-[#9D71E8]/30 rounded-lg transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Clear Filters</span>
@@ -177,16 +177,16 @@ export function PackingQueueTable({
               type="button"
               onClick={handleExportCsv}
               disabled={records.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-200 bg-[#111F38] border border-[#223659] hover:bg-[#172A4A] hover:border-[#2E4975] disabled:opacity-50 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium glass-control disabled:opacity-50 rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-[#D1B8FF]" />
               <span>Download CSV</span>
             </button>
           </div>
         </div>
 
-        {/* Status Segmented Tabs with sliding highlight */}
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#081020] border border-[#162542] rounded-lg w-fit max-w-full overflow-x-auto">
+        {/* Status Segmented Tabs with sliding glow highlight */}
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-[#0B0720]/70 border border-[#D1B8FF]/14 rounded-xl w-fit max-w-full overflow-x-auto">
           {(['All', ...CAPACITY_STATUS_ORDER] as const).map((status) => {
             const active = statusFilter === status;
             return (
@@ -194,17 +194,17 @@ export function PackingQueueTable({
                 key={status}
                 type="button"
                 onClick={() => onStatusFilterChange(status)}
-                className={`relative px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer ${
                   active
-                    ? 'text-white'
-                    : 'text-slate-400 hover:text-slate-100'
+                    ? 'text-[#F2E9FF]'
+                    : 'text-[#D1B8FF]/65 hover:text-[#F2E9FF]'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="tableStatusPill"
-                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-blue-600 rounded-md"
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8]/90 rounded-lg shadow-[0_0_18px_-4px_rgba(106,47,200,0.8)]"
                   />
                 )}
                 <span className="relative z-10">{status}</span>
@@ -216,14 +216,14 @@ export function PackingQueueTable({
         {/* Search & Secondary Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
           <div className="lg:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-[#9D71E8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search date (e.g. 14 Nov), week (W46), weekday..."
               aria-label="Search daily capacity records"
-              className="w-full h-10 pl-9 pr-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+              className="w-full h-10 pl-9 pr-3 text-sm glass-control rounded-lg placeholder:text-[#D1B8FF]/40"
             />
           </div>
 
@@ -232,7 +232,7 @@ export function PackingQueueTable({
               value={weekFilter}
               onChange={(e) => onWeekFilterChange(e.target.value)}
               aria-label="Filter by Week No."
-              className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+              className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
             >
               <option value="All">All Weeks</option>
               {weeks.map((w) => (
@@ -248,7 +248,7 @@ export function PackingQueueTable({
               value={weekdayFilter}
               onChange={(e) => onWeekdayFilterChange(e.target.value)}
               aria-label="Filter by Weekday"
-              className="w-full h-10 px-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+              className="w-full h-10 px-3 text-sm glass-control rounded-lg cursor-pointer"
             >
               <option value="All">All Weekdays</option>
               {weekdays.map((d) => (
@@ -260,7 +260,7 @@ export function PackingQueueTable({
           </div>
 
           <div className="lg:col-span-2 relative">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#9D71E8] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <select
               value={sortBy}
               onChange={(e) =>
@@ -269,7 +269,7 @@ export function PackingQueueTable({
                 )
               }
               aria-label="Sort daily capacity records"
-              className="w-full h-10 pl-8 pr-3 text-sm bg-[#081020] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+              className="w-full h-10 pl-8 pr-3 text-sm glass-control rounded-lg cursor-pointer"
             >
               <option value="date">Sort: Date</option>
               <option value="plan">Sort: Plan Qty</option>
@@ -282,15 +282,15 @@ export function PackingQueueTable({
 
       {/* Loading State */}
       {isLoading && (
-        <div className="divide-y divide-[#162542]">
+        <div className="divide-y divide-[#D1B8FF]/10">
           {[0, 1, 2, 3, 4, 5].map((row) => (
             <div
               key={row}
               className="px-5 py-3 flex items-center justify-between gap-4 animate-pulse"
             >
-              <div className="h-4 w-24 bg-[#182947] rounded" />
-              <div className="h-4 w-32 bg-[#13223D] rounded" />
-              <div className="h-4 w-24 bg-[#182947] rounded" />
+              <div className="h-4 w-24 bg-[#6A2FC8]/30 rounded" />
+              <div className="h-4 w-32 bg-[#25134D]/60 rounded" />
+              <div className="h-4 w-24 bg-[#9D71E8]/25 rounded" />
             </div>
           ))}
         </div>
@@ -299,17 +299,17 @@ export function PackingQueueTable({
       {/* Empty State */}
       {!isLoading && records.length === 0 && (
         <div className="px-6 py-14 text-center">
-          <p className="text-sm font-medium text-slate-100">
+          <p className="text-sm font-medium text-[#F2E9FF]">
             No capacity rows match the current filter
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-[#D1B8FF]/65 mt-1">
             Adjust your search, week, or status filter to view daily records.
           </p>
           {hasActiveFilters && (
             <button
               type="button"
               onClick={onResetFilters}
-              className="mt-4 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors duration-150 cursor-pointer"
+              className="mt-4 px-4 py-2 text-xs font-medium rounded-lg btn-violet-glow cursor-pointer"
             >
               Reset All Filters
             </button>
@@ -323,7 +323,7 @@ export function PackingQueueTable({
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#091224] border-b border-[#1B2B48] text-xs font-medium text-slate-400 whitespace-nowrap">
+                <tr className="bg-[#0B0720]/65 border-b border-[#D1B8FF]/14 text-xs font-medium text-[#D1B8FF]/70 whitespace-nowrap">
                   <th className="py-2.5 pl-5 pr-3 font-medium">Date:</th>
                   <th className="py-2.5 px-3 font-medium">Week No.</th>
                   <th className="py-2.5 px-3 font-medium">Status</th>
@@ -349,7 +349,7 @@ export function PackingQueueTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#162542] text-sm">
+              <tbody className="divide-y divide-[#D1B8FF]/10 text-sm">
                 {records.map((row) => {
                   const isToday = isRowToday(row);
                   return (
@@ -358,33 +358,35 @@ export function PackingQueueTable({
                       onClick={() => onSelectRecord(row)}
                       className={`h-10 transition-colors duration-150 cursor-pointer ${
                         isToday
-                          ? 'bg-[#12294D] hover:bg-[#17335F] ring-1 ring-inset ring-sky-400/40'
+                          ? 'bg-[#6A2FC8]/25 hover:bg-[#6A2FC8]/35 ring-1 ring-inset ring-[#D1B8FF]/45 shadow-[inset_0_0_24px_-12px_rgba(157,113,232,0.85)]'
                           : row.status === 'Off Day' || row.status === 'Waiting'
-                            ? 'bg-[#091224]/50 hover:bg-[#13223D] text-slate-500'
-                            : 'hover:bg-[#13223D]'
+                            ? 'bg-[#0B0720]/30 hover:bg-[#6A2FC8]/15 text-[#D1B8FF]/45'
+                            : 'hover:bg-[#6A2FC8]/18'
                       }`}
                     >
                       <td className="py-2 pl-5 pr-3 whitespace-nowrap">
                         <span
                           className={
                             isToday
-                              ? 'font-semibold text-white'
-                              : 'font-medium text-slate-100'
+                              ? 'font-semibold text-[#F2E9FF]'
+                              : 'font-medium text-[#F2E9FF]/90'
                           }
                         >
                           {row.dateLabel}
                         </span>
                         <span
                           className={`ml-2 text-xs ${
-                            isToday ? 'text-sky-300' : 'text-slate-400'
+                            isToday
+                              ? 'text-[#D1B8FF]'
+                              : 'text-[#D1B8FF]/65'
                           }`}
                         >
                           {row.weekday}
                         </span>
                         {isToday && (
-                          <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-sky-400">
+                          <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[#D1B8FF]">
                             <span
-                              className="w-1.5 h-1.5 rounded-full bg-sky-400"
+                              className="w-1.5 h-1.5 rounded-full bg-[#D1B8FF] shadow-[0_0_8px_#D1B8FF]"
                               aria-hidden="true"
                             />
                             Today
@@ -393,7 +395,9 @@ export function PackingQueueTable({
                       </td>
                       <td
                         className={`py-2 px-3 font-mono text-xs whitespace-nowrap ${
-                          isToday ? 'text-sky-300 font-medium' : 'text-slate-400'
+                          isToday
+                            ? 'text-[#D1B8FF] font-medium'
+                            : 'text-[#D1B8FF]/65'
                         }`}
                       >
                         {row.weekNo}
@@ -401,38 +405,38 @@ export function PackingQueueTable({
                       <td className="py-2 px-3 whitespace-nowrap">
                         <CapacityStatusLabel status={row.status} />
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-300 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/80 whitespace-nowrap">
                         {row.planQty.toLocaleString()}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums font-medium text-slate-100 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums font-medium text-[#F2E9FF] whitespace-nowrap">
                         {row.inputQty.toLocaleString()}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/65 whitespace-nowrap">
                         {row.tradeQty.toLocaleString()}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-300 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/80 whitespace-nowrap">
                         {row.finishedItems}/{row.plannedItems}
                       </td>
                       <td
                         className={`py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap ${
                           row.remainReworkQty < 0
-                            ? 'text-red-400 font-semibold'
-                            : 'text-slate-500'
+                            ? 'text-rose-400 font-semibold'
+                            : 'text-[#D1B8FF]/50'
                         }`}
                       >
                         {row.remainReworkQty.toLocaleString()}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/65 whitespace-nowrap">
                         {row.ppaNgQty}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-400 whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/65 whitespace-nowrap">
                         {row.oqcNgQty}
                       </td>
                       <td
                         className={`py-2 pl-3 pr-5 text-right font-mono tabular-nums whitespace-nowrap ${
                           row.totalNgQty >= 40
-                            ? 'text-amber-400 font-semibold'
-                            : 'text-slate-300'
+                            ? 'text-amber-300 font-semibold'
+                            : 'text-[#D1B8FF]/80'
                         }`}
                       >
                         {row.totalNgQty}
@@ -442,46 +446,46 @@ export function PackingQueueTable({
                 })}
               </tbody>
               <tfoot>
-                <tr className="bg-[#091224] border-t-2 border-[#223659] text-sm font-semibold">
-                  <td className="py-3 pl-5 pr-3 text-slate-100 whitespace-nowrap">
+                <tr className="bg-[#0B0720]/70 border-t-2 border-[#9D71E8]/35 text-sm font-semibold">
+                  <td className="py-3 pl-5 pr-3 text-[#F2E9FF] whitespace-nowrap">
                     Total ({records.length}{' '}
                     {records.length === 1 ? 'day' : 'days'})
                   </td>
-                  <td className="py-3 px-3 text-xs font-mono text-slate-400 whitespace-nowrap">
+                  <td className="py-3 px-3 text-xs font-mono text-[#D1B8FF]/60 whitespace-nowrap">
                     —
                   </td>
-                  <td className="py-3 px-3 text-xs font-mono text-sky-400 whitespace-nowrap">
+                  <td className="py-3 px-3 text-xs font-mono text-[#D1B8FF] whitespace-nowrap">
                     {totals.activeDays} active
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-200 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/85 whitespace-nowrap">
                     {totals.planQty.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-white whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#F2E9FF] whitespace-nowrap">
                     {totals.inputQty.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-300 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/80 whitespace-nowrap">
                     {totals.tradeQty.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-200 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/85 whitespace-nowrap">
                     {totals.finishedItems.toLocaleString()}/
                     {totals.plannedItems.toLocaleString()}
                   </td>
                   <td
                     className={`py-3 px-3 text-right font-mono tabular-nums whitespace-nowrap ${
                       totals.remainReworkQty < 0
-                        ? 'text-red-400'
-                        : 'text-emerald-400'
+                        ? 'text-rose-400'
+                        : 'text-emerald-300'
                     }`}
                   >
                     {totals.remainReworkQty.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-300 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/80 whitespace-nowrap">
                     {totals.ppaNgQty.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-300 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/80 whitespace-nowrap">
                     {totals.oqcNgQty.toLocaleString()}
                   </td>
-                  <td className="py-3 pl-3 pr-5 text-right font-mono tabular-nums text-amber-400 whitespace-nowrap">
+                  <td className="py-3 pl-3 pr-5 text-right font-mono tabular-nums text-amber-300 whitespace-nowrap">
                     {totals.totalNgQty.toLocaleString()}
                   </td>
                 </tr>
@@ -490,7 +494,7 @@ export function PackingQueueTable({
           </div>
 
           {/* Mobile Stacked Cards */}
-          <div className="md:hidden divide-y divide-[#162542]">
+          <div className="md:hidden divide-y divide-[#D1B8FF]/10">
             {records.map((row) => {
               const isToday = isRowToday(row);
               return (
@@ -500,24 +504,24 @@ export function PackingQueueTable({
                   onClick={() => onSelectRecord(row)}
                   className={`w-full p-4 text-left transition-colors duration-150 cursor-pointer space-y-2.5 ${
                     isToday
-                      ? 'bg-[#12294D] hover:bg-[#17335F] ring-1 ring-inset ring-sky-400/40'
-                      : 'hover:bg-[#13223D]'
+                      ? 'bg-[#6A2FC8]/25 hover:bg-[#6A2FC8]/35 ring-1 ring-inset ring-[#D1B8FF]/45'
+                      : 'hover:bg-[#6A2FC8]/15'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-slate-100">
+                    <div className="text-sm font-semibold text-[#F2E9FF]">
                       {row.dateLabel}{' '}
                       <span
                         className={`font-normal ${
-                          isToday ? 'text-sky-300' : 'text-slate-400'
+                          isToday ? 'text-[#D1B8FF]' : 'text-[#D1B8FF]/65'
                         }`}
                       >
                         · {row.weekday} · {row.weekNo}
                       </span>
                       {isToday && (
-                        <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-sky-400">
+                        <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[#D1B8FF]">
                           <span
-                            className="w-1.5 h-1.5 rounded-full bg-sky-400"
+                            className="w-1.5 h-1.5 rounded-full bg-[#D1B8FF] shadow-[0_0_8px_#D1B8FF]"
                             aria-hidden="true"
                           />
                           Today
@@ -527,78 +531,78 @@ export function PackingQueueTable({
                     <CapacityStatusLabel status={row.status} />
                   </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs font-mono tabular-nums">
-                  <div>
-                    <span className="text-slate-500 block">Plan</span>
-                    <span className="text-slate-300 font-medium">
-                      {row.planQty.toLocaleString()}
-                    </span>
+                  <div className="grid grid-cols-3 gap-2 text-xs font-mono tabular-nums">
+                    <div>
+                      <span className="text-[#D1B8FF]/55 block">Plan</span>
+                      <span className="text-[#D1B8FF]/85 font-medium">
+                        {row.planQty.toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[#D1B8FF]/55 block">Input</span>
+                      <span className="text-[#F2E9FF] font-semibold">
+                        {row.inputQty.toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[#D1B8FF]/55 block">Items</span>
+                      <span className="text-[#D1B8FF]/85">
+                        {row.finishedItems}/{row.plannedItems}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block">Input</span>
-                    <span className="text-slate-100 font-semibold">
-                      {row.inputQty.toLocaleString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Items</span>
-                    <span className="text-slate-300">
-                      {row.finishedItems}/{row.plannedItems}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums text-slate-400 pt-1">
-                  <span>
-                    NG: {row.totalNgQty} (PPA {row.ppaNgQty} · OQC{' '}
-                    {row.oqcNgQty})
-                  </span>
-                  <span
-                    className={
-                      row.remainReworkQty < 0
-                        ? 'text-red-400 font-semibold'
-                        : ''
-                    }
-                  >
-                    Rework: {row.remainReworkQty}
-                  </span>
-                </div>
-              </button>
+                  <div className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums text-[#D1B8FF]/65 pt-1">
+                    <span>
+                      NG: {row.totalNgQty} (PPA {row.ppaNgQty} · OQC{' '}
+                      {row.oqcNgQty})
+                    </span>
+                    <span
+                      className={
+                        row.remainReworkQty < 0
+                          ? 'text-rose-400 font-semibold'
+                          : ''
+                      }
+                    >
+                      Rework: {row.remainReworkQty}
+                    </span>
+                  </div>
+                </button>
               );
             })}
 
-            <div className="p-4 bg-[#091224] border-t-2 border-[#223659] space-y-2.5">
+            <div className="p-4 bg-[#0B0720]/70 border-t-2 border-[#9D71E8]/35 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-[#F2E9FF]">
                   Table Total ({records.length}{' '}
                   {records.length === 1 ? 'day' : 'days'})
                 </span>
-                <span className="text-xs font-mono text-sky-400">
+                <span className="text-xs font-mono text-[#D1B8FF]">
                   {totals.activeDays} active
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs font-mono tabular-nums">
                 <div>
-                  <span className="text-slate-500 block">Plan</span>
-                  <span className="text-slate-200 font-semibold">
+                  <span className="text-[#D1B8FF]/55 block">Plan</span>
+                  <span className="text-[#D1B8FF]/85 font-semibold">
                     {totals.planQty.toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Input</span>
-                  <span className="text-white font-semibold">
+                  <span className="text-[#D1B8FF]/55 block">Input</span>
+                  <span className="text-[#F2E9FF] font-semibold">
                     {totals.inputQty.toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Items</span>
-                  <span className="text-slate-200 font-semibold">
+                  <span className="text-[#D1B8FF]/55 block">Items</span>
+                  <span className="text-[#D1B8FF]/85 font-semibold">
                     {totals.finishedItems.toLocaleString()}/
                     {totals.plannedItems.toLocaleString()}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums text-slate-300 pt-1">
+              <div className="flex items-center justify-between gap-3 text-xs font-mono tabular-nums text-[#D1B8FF]/80 pt-1">
                 <span>
                   NG: {totals.totalNgQty.toLocaleString()} (PPA{' '}
                   {totals.ppaNgQty.toLocaleString()} · OQC{' '}
@@ -607,8 +611,8 @@ export function PackingQueueTable({
                 <span
                   className={
                     totals.remainReworkQty < 0
-                      ? 'text-red-400 font-semibold'
-                      : 'text-emerald-400 font-semibold'
+                      ? 'text-rose-400 font-semibold'
+                      : 'text-emerald-300 font-semibold'
                   }
                 >
                   Rework: {totals.remainReworkQty.toLocaleString()}

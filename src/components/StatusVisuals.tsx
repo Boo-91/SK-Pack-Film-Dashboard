@@ -10,6 +10,10 @@ import {
 } from 'lucide-react';
 import type { WeekWindowMeta } from '../lib/sheetParser';
 import { CapacityStatus, PackingCapacityRow } from '../types/packing';
+import {
+  CosmicDonutChart,
+  CosmicTrendBarChart,
+} from './CosmicCharts';
 
 export const CAPACITY_STATUS_ORDER: CapacityStatus[] = [
   'Completed',
@@ -24,6 +28,7 @@ export const CAPACITY_STATUS_META: Record<
   CapacityStatus,
   {
     color: string;
+    highlightColor: string;
     textClass: string;
     icon: React.ComponentType<{ className?: string }>;
     description: string;
@@ -31,37 +36,43 @@ export const CAPACITY_STATUS_META: Record<
 > = {
   Completed: {
     color: '#34D399',
-    textClass: 'text-emerald-400',
+    highlightColor: '#6EE7B7',
+    textClass: 'text-emerald-300',
     icon: CheckCircle2,
     description: 'Plan & items 100% finished with zero rework',
   },
   'Rework Alert': {
-    color: '#F87171',
-    textClass: 'text-red-400',
+    color: '#FB7185',
+    highlightColor: '#FDA4AF',
+    textClass: 'text-rose-400',
     icon: AlertTriangle,
     description: "Negative Remain Rework Qty's recorded",
   },
   'In Progress': {
     color: '#38BDF8',
-    textClass: 'text-sky-400',
+    highlightColor: '#7DD3FC',
+    textClass: 'text-sky-300',
     icon: PlayCircle,
     description: 'Partial input received against plan',
   },
   Planned: {
     color: '#FBBF24',
-    textClass: 'text-amber-400',
+    highlightColor: '#FDE68A',
+    textClass: 'text-amber-300',
     icon: Clock,
     description: 'Scheduled plan awaiting input',
   },
   Waiting: {
-    color: '#818CF8',
-    textClass: 'text-indigo-400',
+    color: '#D1B8FF',
+    highlightColor: '#EFE4FF',
+    textClass: 'text-[#D1B8FF]',
     icon: Hourglass,
     description: 'Upcoming/today date awaiting plan entry',
   },
   'Off Day': {
-    color: '#64748B',
-    textClass: 'text-slate-400',
+    color: '#635385',
+    highlightColor: '#7D6CA3',
+    textClass: 'text-[#A896C9]/65',
     icon: CalendarOff,
     description: 'Past date with zero planned volume & items',
   },
@@ -119,11 +130,11 @@ export function CapacityScorecardStrip({
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-[#0C172B] border border-[#1B2B48] rounded-xl p-5 h-28 animate-pulse"
+            className="glass-panel rounded-2xl p-5 h-28 animate-pulse"
           >
-            <div className="h-3 w-24 bg-[#182947] rounded mb-3" />
-            <div className="h-7 w-24 bg-[#182947] rounded mb-2" />
-            <div className="h-3 w-32 bg-[#13223D] rounded" />
+            <div className="h-3 w-24 bg-[#6A2FC8]/30 rounded mb-3" />
+            <div className="h-7 w-24 bg-[#9D71E8]/25 rounded mb-2" />
+            <div className="h-3 w-32 bg-[#25134D]/60 rounded" />
           </div>
         ))}
       </div>
@@ -133,54 +144,64 @@ export function CapacityScorecardStrip({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <motion.div
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -3 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="glass-panel-interactive rounded-2xl p-5"
       >
-        <p className="text-xs font-medium text-slate-400">Input vs. Plan Qty</p>
+        <p className="text-xs font-medium text-[#D1B8FF]/70">
+          Input vs. Plan Qty
+        </p>
         <div className="mt-2 flex items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold tracking-tight text-slate-100 font-mono tabular-nums">
+          <span className="text-2xl font-semibold tracking-tight text-[#F2E9FF] font-mono tabular-nums">
             {totalInputQty.toLocaleString()}
           </span>
-          <span className="text-xs font-medium text-sky-400 font-mono tabular-nums">
+          <span className="text-xs font-medium text-[#D1B8FF] font-mono tabular-nums">
             {qtyProgressPct}%
           </span>
         </div>
-        <div className="mt-2.5 h-1.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-500 transition-all duration-300"
-            style={{ width: `${Math.min(100, qtyProgressPct)}%` }}
+        <div className="mt-2.5 h-1.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/10 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, qtyProgressPct)}%` }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full rounded-full bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8] shadow-[0_0_10px_rgba(157,113,232,0.75)]"
           />
         </div>
-        <p className="mt-2 text-xs text-slate-400 font-mono tabular-nums">
+        <p className="mt-2 text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
           Plan {totalPlanQty.toLocaleString()} · Trade{' '}
           {totalTradeQty.toLocaleString()}
         </p>
       </motion.div>
 
       <motion.div
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -3 }}
+        transition={{ duration: 0.2, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
+        className="glass-panel-interactive rounded-2xl p-5"
       >
-        <p className="text-xs font-medium text-slate-400">
+        <p className="text-xs font-medium text-[#D1B8FF]/70">
           Finished vs. Planned Items
         </p>
         <div className="mt-2 flex items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold tracking-tight text-slate-100 font-mono tabular-nums">
+          <span className="text-2xl font-semibold tracking-tight text-[#F2E9FF] font-mono tabular-nums">
             {totalFinishedItems.toLocaleString()}
           </span>
-          <span className="text-xs font-medium text-emerald-400 font-mono tabular-nums">
+          <span className="text-xs font-medium text-emerald-300 font-mono tabular-nums">
             {itemProgressPct}%
           </span>
         </div>
-        <div className="mt-2.5 h-1.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-          <div
-            className="h-full bg-emerald-400 transition-all duration-300"
-            style={{ width: `${Math.min(100, itemProgressPct)}%` }}
+        <div className="mt-2.5 h-1.5 w-full bg-[#0B0720]/75 border border-[#D1B8FF]/10 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, itemProgressPct)}%` }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.65)]"
           />
         </div>
-        <p className="mt-2 text-xs text-slate-400 font-mono tabular-nums">
+        <p className="mt-2 text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
           {totalPlannedItems.toLocaleString()} planned ·{' '}
           {activeProductionDays.length} active{' '}
           {activeProductionDays.length === 1 ? 'day' : 'days'}
@@ -188,46 +209,54 @@ export function CapacityScorecardStrip({
       </motion.div>
 
       <motion.div
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -3 }}
+        transition={{ duration: 0.2, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+        className="glass-panel-interactive rounded-2xl p-5"
       >
-        <p className="text-xs font-medium text-slate-400">Total Quality NG</p>
+        <p className="text-xs font-medium text-[#D1B8FF]/70">
+          Total Quality NG
+        </p>
         <div className="mt-2 flex items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold tracking-tight text-amber-400 font-mono tabular-nums">
+          <span className="text-2xl font-semibold tracking-tight text-amber-300 font-mono tabular-nums">
             {totalNg.toLocaleString()}
           </span>
-          <span className="text-xs text-slate-400 font-mono tabular-nums">
+          <span className="text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
             {totalInputQty > 0
               ? `${((totalNg / totalInputQty) * 100).toFixed(3)}%`
               : '0%'}
           </span>
         </div>
-        <p className="mt-3 text-xs text-slate-300 font-mono tabular-nums">
+        <p className="mt-3 text-xs text-[#D1B8FF]/80 font-mono tabular-nums">
           PPA NG: {totalPpaNg.toLocaleString()} · OQC NG:{' '}
           {totalOqcNg.toLocaleString()}
         </p>
       </motion.div>
 
       <motion.div
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-[#0C172B] border border-[#1B2B48] hover:border-[#2A426E] rounded-xl p-5 transition-colors duration-150"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -3 }}
+        transition={{ duration: 0.2, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+        className="glass-panel-interactive rounded-2xl p-5"
       >
-        <p className="text-xs font-medium text-slate-400">Remain Rework Qty</p>
+        <p className="text-xs font-medium text-[#D1B8FF]/70">
+          Remain Rework Qty
+        </p>
         <div className="mt-2 flex items-baseline justify-between gap-2">
           <span
             className={`text-2xl font-semibold tracking-tight font-mono tabular-nums ${
-              totalRemainRework < 0 ? 'text-red-400' : 'text-emerald-400'
+              totalRemainRework < 0 ? 'text-rose-400' : 'text-emerald-300'
             }`}
           >
             {totalRemainRework.toLocaleString()}
           </span>
-          <span className="text-xs text-slate-400 font-mono tabular-nums">
+          <span className="text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
             {reworkDaysCount} {reworkDaysCount === 1 ? 'day' : 'days'}
           </span>
         </div>
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-[#D1B8FF]/65">
           {reworkDaysCount > 0
             ? 'Days with negative rework balance'
             : 'All rework quantities cleared'}
@@ -358,24 +387,40 @@ export function PackingOverviewVisuals({
     })
     .filter((d) => d.count > 0);
 
-  const radius = 64;
-  const circumference = 2 * Math.PI * radius;
-  let cumulativeOffset = 0;
+  const radiusDonutSegments = CAPACITY_STATUS_ORDER.map((status) => ({
+    id: status,
+    label: status,
+    count: statusCounts[status].days,
+    color: CAPACITY_STATUS_META[status].color,
+    highlightColor: CAPACITY_STATUS_META[status].highlightColor,
+  }));
 
-  const donutSegments = CAPACITY_STATUS_ORDER.map((status) => {
-    const count = statusCounts[status].days;
-    const ratio = totalDays > 0 ? count / totalDays : 0;
-    const segmentLength = ratio * circumference;
-    const dashOffset = -cumulativeOffset;
-    cumulativeOffset += segmentLength;
-    return {
-      status,
-      count,
-      segmentLength,
-      dashOffset,
-      color: CAPACITY_STATUS_META[status].color,
-    };
-  });
+  const ngTrendItems = ngActiveDays.map((day) => ({
+    id: day.id,
+    axisLabel: day.dateLabel,
+    headerTitle: `${day.dateLabel} (${day.weekday})`,
+    headerSub: day.weekNo ? `${day.weekNo} · Status: ${day.status}` : undefined,
+    totalValue: day.totalNgQty,
+    segments: [
+      {
+        key: 'oqc',
+        label: 'OQC NG',
+        value: day.oqcNgQty,
+        gradientClass: 'bg-gradient-to-t from-rose-500/85 via-rose-400 to-rose-300',
+        swatchClass: 'bg-rose-400',
+        glowColor: 'rgba(251, 113, 133, 0.7)',
+      },
+      {
+        key: 'ppa',
+        label: 'PPA NG',
+        value: day.ppaNgQty,
+        gradientClass: 'bg-gradient-to-t from-amber-500/85 via-amber-400 to-amber-200',
+        swatchClass: 'bg-amber-300',
+        glowColor: 'rgba(252, 211, 77, 0.65)',
+      },
+    ],
+    footerNote: `Input: ${day.inputQty.toLocaleString()} / Plan: ${day.planQty.toLocaleString()}`,
+  }));
 
   if (isLoading) {
     return (
@@ -384,17 +429,17 @@ export function PackingOverviewVisuals({
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-[#0C172B] border border-[#1B2B48] rounded-xl p-5 h-28 animate-pulse"
+              className="glass-panel rounded-2xl p-5 h-28 animate-pulse"
             >
-              <div className="h-3 w-24 bg-[#182947] rounded mb-3" />
-              <div className="h-7 w-24 bg-[#182947] rounded mb-2" />
-              <div className="h-3 w-32 bg-[#13223D] rounded" />
+              <div className="h-3 w-24 bg-[#6A2FC8]/30 rounded mb-3" />
+              <div className="h-7 w-24 bg-[#9D71E8]/25 rounded mb-2" />
+              <div className="h-3 w-32 bg-[#25134D]/60 rounded" />
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 h-80 animate-pulse" />
-          <div className="lg:col-span-7 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 h-80 animate-pulse" />
+          <div className="lg:col-span-5 glass-panel rounded-2xl p-6 h-80 animate-pulse" />
+          <div className="lg:col-span-7 glass-panel rounded-2xl p-6 h-80 animate-pulse" />
         </div>
       </div>
     );
@@ -404,155 +449,64 @@ export function PackingOverviewVisuals({
     <div className="space-y-6">
       <CapacityScorecardStrip records={records} />
 
-      {/* Primary Visuals Row: Day Status Ring + Weekly Plan vs Input */}
+      {/* Primary Visuals Row: Orbital Day Status Ring + Grouped Weekly Plan vs Input */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-5 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        <section className="lg:col-span-5 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Daily Schedule Status
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Click any status row to filter the daily capacity log
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
+                Hover arcs to inspect · Click any status to filter log
               </p>
             </div>
             {activeStatusFilter !== 'All' && (
               <button
                 type="button"
                 onClick={() => onSelectStatus('All')}
-                className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 Reset
               </button>
             )}
           </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
-              <svg
-                viewBox="0 0 160 160"
-                className="w-40 h-40 -rotate-90"
-                role="img"
-                aria-label="Daily schedule status ring chart"
-              >
-                <circle
-                  cx="80"
-                  cy="80"
-                  r={radius}
-                  fill="none"
-                  stroke="#13223D"
-                  strokeWidth="18"
-                />
-                {totalDays > 0 &&
-                  donutSegments.map((seg) =>
-                    seg.segmentLength > 0 ? (
-                      <circle
-                        key={seg.status}
-                        cx="80"
-                        cy="80"
-                        r={radius}
-                        fill="none"
-                        stroke={seg.color}
-                        strokeWidth="18"
-                        strokeDasharray={`${seg.segmentLength} ${circumference}`}
-                        strokeDashoffset={seg.dashOffset}
-                        opacity={
-                          activeStatusFilter === 'All' ||
-                          activeStatusFilter === seg.status
-                            ? 1
-                            : 0.22
-                        }
-                        className="transition-opacity duration-150 cursor-pointer hover:opacity-90"
-                        onClick={() =>
-                          onSelectStatus(
-                            activeStatusFilter === seg.status
-                              ? 'All'
-                              : seg.status
-                          )
-                        }
-                      />
-                    ) : null
-                  )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-semibold text-slate-100 font-mono tabular-nums">
-                  {totalDays}
-                </span>
-                <span className="text-xs text-slate-400">Days</span>
-              </div>
-            </div>
-
-            <div className="w-full divide-y divide-[#162542]">
-              {CAPACITY_STATUS_ORDER.map((status) => {
-                const count = statusCounts[status].days;
-                const pct =
-                  totalDays > 0 ? Math.round((count / totalDays) * 100) : 0;
-                const isSelected = activeStatusFilter === status;
-                return (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() =>
-                      onSelectStatus(isSelected ? 'All' : status)
-                    }
-                    className={`w-full py-2 px-2.5 flex items-center justify-between gap-3 text-left rounded-md transition-all duration-150 cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#162849]'
-                        : 'hover:bg-[#12203B] hover:translate-x-0.5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className="w-2.5 h-2.5 rounded-xs shrink-0"
-                        style={{
-                          backgroundColor: CAPACITY_STATUS_META[status].color,
-                        }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-sm font-medium text-slate-200 truncate">
-                        {status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 font-mono tabular-nums">
-                      <span className="text-sm font-semibold text-slate-100 w-7 text-right">
-                        {count}
-                      </span>
-                      <span className="text-xs text-slate-400 w-9 text-right">
-                        {pct}%
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <CosmicDonutChart
+            segments={radiusDonutSegments}
+            totalCount={totalDays}
+            totalLabel="Days"
+            activeFilter={activeStatusFilter}
+            onSelect={(id) => onSelectStatus(id as CapacityStatus | 'All')}
+            ariaLabel="Daily schedule status ring chart"
+          />
         </section>
 
-        {/* Weekly Plan vs Input Capacity Chart (Last Week, Current Week, Next Week) */}
-        <section className="lg:col-span-7 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        {/* Weekly Plan vs Input Progressive Bar Chart (Last Week, Current Week, Next Week) */}
+        <section className="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Weekly Capacity: Plan vs. Input
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
                 Last week, current week, and next week · Click a week to filter
               </p>
             </div>
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-4 text-xs text-[#D1B8FF]/70">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#2C426B]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D1B8FF]/45 border border-[#D1B8FF]/50" />
                 <span>Plan Qty</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-blue-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9D71E8] shadow-[0_0_8px_rgba(157,113,232,0.85)]" />
                 <span>Input Qty</span>
               </span>
               {activeWeekFilter !== 'All' && (
                 <button
                   type="button"
                   onClick={() => onSelectWeek('All')}
-                  className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
+                  className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] transition-colors cursor-pointer"
                 >
                   Show 3-Week Window
                 </button>
@@ -560,13 +514,13 @@ export function PackingOverviewVisuals({
             </div>
           </div>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-5 space-y-3">
             {weeks.length === 0 ? (
-              <p className="text-sm text-slate-400 py-8 text-center">
+              <p className="text-sm text-[#D1B8FF]/65 py-10 text-center">
                 No weekly data found for the current window.
               </p>
             ) : (
-              weeks.map((wk) => {
+              weeks.map((wk, idx) => {
                 const planWidth = (wk.planQty / maxWeekQty) * 100;
                 const inputWidth = (wk.inputQty / maxWeekQty) * 100;
                 const pct =
@@ -575,6 +529,7 @@ export function PackingOverviewVisuals({
                     : 0;
                 const isSelected = activeWeekFilter === wk.weekNo;
                 const isCurrent = wk.roleLabel === 'Current Week';
+                const isOverTarget = pct >= 100 && wk.planQty > 0;
 
                 return (
                   <button
@@ -583,55 +538,96 @@ export function PackingOverviewVisuals({
                     onClick={() =>
                       onSelectWeek(isSelected ? 'All' : wk.weekNo)
                     }
-                    className={`w-full text-left p-3 -mx-3 rounded-lg transition-all duration-150 cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-3 rounded-xl transition-all duration-150 cursor-pointer relative overflow-hidden ${
                       isSelected
-                        ? 'bg-[#162849]'
-                        : 'hover:bg-[#12203B]'
+                        ? 'bg-[#6A2FC8]/30 ring-1 ring-inset ring-[#9D71E8]/60 shadow-[0_0_20px_-6px_rgba(157,113,232,0.75)]'
+                        : isCurrent
+                          ? 'bg-[#25134D]/45 ring-1 ring-inset ring-[#D1B8FF]/20 hover:bg-[#6A2FC8]/22'
+                          : 'bg-[#0B0720]/35 ring-1 ring-inset ring-[#D1B8FF]/8 hover:bg-[#6A2FC8]/18'
                     }`}
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-sm font-semibold text-slate-100 shrink-0">
+                        <span className="font-mono text-sm font-semibold text-[#F2E9FF] shrink-0">
                           {wk.weekNo}
                         </span>
                         <span
                           className={`text-xs font-medium shrink-0 ${
-                            isCurrent ? 'text-sky-400' : 'text-slate-400'
+                            isCurrent
+                              ? 'text-[#D1B8FF]'
+                              : 'text-[#D1B8FF]/65'
                           }`}
                         >
                           · {wk.roleLabel}
                         </span>
-                        <span className="text-xs text-slate-500 truncate hidden sm:inline">
+                        <span className="text-xs text-[#D1B8FF]/50 truncate hidden sm:inline">
                           · {wk.firstDate} – {wk.lastDate}
                         </span>
                       </div>
-                      <div className="text-xs font-mono tabular-nums text-slate-300 shrink-0">
-                        <span className="font-semibold text-slate-100">
+                      <div className="text-xs font-mono tabular-nums text-[#D1B8FF]/80 shrink-0">
+                        <span className="font-semibold text-[#F2E9FF]">
                           {wk.inputQty.toLocaleString()}
                         </span>
-                        <span className="text-slate-400">
+                        <span className="text-[#D1B8FF]/60">
                           {' '}
-                          / {wk.planQty.toLocaleString()} ({pct}%)
+                          / {wk.planQty.toLocaleString()} (
                         </span>
+                        <span
+                          className={`font-semibold ${
+                            isOverTarget ? 'text-emerald-300' : 'text-[#D1B8FF]'
+                          }`}
+                        >
+                          {pct}%
+                        </span>
+                        <span className="text-[#D1B8FF]/60">)</span>
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div className="h-2.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#334E7D] rounded-full transition-all duration-300"
-                          style={{ width: `${planWidth}%` }}
-                        />
+                    <div className="space-y-2">
+                      {/* Plan Progressive Track */}
+                      <div className="relative h-2.5 w-full bg-[#0B0720]/80 border border-[#D1B8FF]/12 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${planWidth}%` }}
+                          transition={{
+                            duration: 0.45,
+                            delay: idx * 0.05,
+                            ease: [0.16, 1, 0.3, 1],
+                          }}
+                          className="h-full rounded-full bg-gradient-to-r from-[#25134D] via-[#D1B8FF]/30 to-[#D1B8FF]/55 relative"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-x-0 top-0 h-px bg-[#F2E9FF]/35"
+                          />
+                        </motion.div>
                       </div>
-                      <div className="h-2.5 w-full bg-[#13223D] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                          style={{ width: `${inputWidth}%` }}
-                        />
+
+                      {/* Input Progressive Track */}
+                      <div className="relative h-2.5 w-full bg-[#0B0720]/80 border border-[#D1B8FF]/12 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${inputWidth}%` }}
+                          transition={{
+                            duration: 0.52,
+                            delay: idx * 0.05 + 0.04,
+                            ease: [0.16, 1, 0.3, 1],
+                          }}
+                          className={`h-full rounded-full relative ${
+                            isOverTarget
+                              ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-200 shadow-[0_0_14px_rgba(52,211,153,0.75)]'
+                              : 'bg-gradient-to-r from-[#6A2FC8] via-[#9D71E8] to-[#D1B8FF] shadow-[0_0_14px_rgba(157,113,232,0.8)]'
+                          }`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-x-0 top-0 h-px bg-white/50"
+                          />
+                        </motion.div>
                       </div>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums text-slate-400">
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums text-[#D1B8FF]/70">
                       <span>
                         Items: {wk.finishedItems}/{wk.plannedItems} · Trade:{' '}
                         {wk.tradeQty.toLocaleString()}
@@ -639,7 +635,7 @@ export function PackingOverviewVisuals({
                       <span
                         className={
                           wk.remainReworkQty < 0
-                            ? 'text-red-400 font-medium'
+                            ? 'text-rose-400 font-semibold'
                             : ''
                         }
                       >
@@ -659,100 +655,48 @@ export function PackingOverviewVisuals({
 
       {/* Secondary Row: Quality NG Breakdown + Weekday Averages */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-7 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6 flex flex-col justify-between">
+        <section className="lg:col-span-7 glass-panel rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">
+              <h2 className="text-base font-semibold text-[#F2E9FF]">
                 Daily Quality NG Trend (PPA vs. OQC)
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
                 Last {ngActiveDays.length} active production days · Hover a bar for exact counts
               </p>
             </div>
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-4 text-xs text-[#D1B8FF]/70">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-amber-400" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.65)]" />
                 <span>PPA NG</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-red-400" />
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.65)]" />
                 <span>OQC NG</span>
               </span>
             </div>
           </div>
 
-          <div className="mt-6">
-            {ngActiveDays.length === 0 ? (
-              <p className="text-sm text-slate-400 py-10 text-center">
-                No active production days in the current filter.
-              </p>
-            ) : (
-              <div className="h-48 flex items-end gap-1.5 sm:gap-2 pt-4 border-b border-[#1B2B48]">
-                {ngActiveDays.map((day) => {
-                  const totalH =
-                    maxDailyNg > 0 ? (day.totalNgQty / maxDailyNg) * 100 : 0;
-                  const ppaShare =
-                    day.totalNgQty > 0
-                      ? (day.ppaNgQty / day.totalNgQty) * 100
-                      : 0;
-                  const oqcShare = 100 - ppaShare;
-                  return (
-                    <div
-                      key={day.id}
-                      className="flex-1 min-w-0 h-full flex flex-col justify-end items-center group"
-                      title={`${day.dateLabel} (${day.weekday}): Total NG ${day.totalNgQty} (PPA ${day.ppaNgQty}, OQC ${day.oqcNgQty})`}
-                    >
-                      <span className="text-[10px] font-mono tabular-nums text-slate-300 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        {day.totalNgQty}
-                      </span>
-                      <div
-                        className="w-full max-w-[22px] rounded-t-sm overflow-hidden flex flex-col justify-end bg-[#13223D] group-hover:scale-x-110 transition-transform duration-150"
-                        style={{
-                          height: `${Math.max(day.totalNgQty > 0 ? 6 : 2, totalH)}%`,
-                        }}
-                      >
-                        {day.oqcNgQty > 0 && (
-                          <div
-                            className="w-full bg-red-400"
-                            style={{ height: `${oqcShare}%` }}
-                          />
-                        )}
-                        {day.ppaNgQty > 0 && (
-                          <div
-                            className="w-full bg-amber-400"
-                            style={{ height: `${ppaShare}%` }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {ngActiveDays.length > 0 && (
-              <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-400">
-                <span>{ngActiveDays[0].dateLabel}</span>
-                <span>
-                  Peak: {Math.max(...ngActiveDays.map((d) => d.totalNgQty))} NG
-                </span>
-                <span>{ngActiveDays[ngActiveDays.length - 1].dateLabel}</span>
-              </div>
-            )}
-          </div>
+          <CosmicTrendBarChart
+            items={ngTrendItems}
+            maxValue={maxDailyNg}
+            unitLabel="NG"
+            emptyMessage="No active production days in the current filter."
+          />
         </section>
 
-        <section className="lg:col-span-5 bg-[#0C172B] border border-[#1B2B48] rounded-xl p-6">
-          <h2 className="text-base font-semibold text-slate-100">
+        <section className="lg:col-span-5 glass-panel rounded-2xl p-6">
+          <h2 className="text-base font-semibold text-[#F2E9FF]">
             Weekday Throughput Average
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Average plan & input capacity across active production days
+          <p className="text-xs text-[#D1B8FF]/65 mt-0.5">
+            Average plan &amp; input capacity across active production days
           </p>
 
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#1B2B48] text-xs font-medium text-slate-400">
+                <tr className="border-b border-[#D1B8FF]/16 text-xs font-medium text-[#D1B8FF]/70">
                   <th className="py-2 pr-3 font-medium">Weekday</th>
                   <th className="py-2 px-3 font-medium text-right">Avg Plan</th>
                   <th className="py-2 px-3 font-medium text-right">
@@ -761,34 +705,46 @@ export function PackingOverviewVisuals({
                   <th className="py-2 pl-3 font-medium text-right">Total NG</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#162542] text-sm">
-                {weekdayStats.map((row) => (
-                  <tr
-                    key={row.day}
-                    className="h-9 hover:bg-[#12203B] transition-colors duration-150"
-                  >
-                    <td className="py-1.5 pr-3 font-medium text-slate-200">
-                      {row.day}
-                      <span className="ml-1.5 text-xs text-slate-400 font-mono">
-                        ({row.count}d)
-                      </span>
-                    </td>
-                    <td className="py-1.5 px-3 text-right font-mono tabular-nums text-slate-400">
-                      {row.avgPlan.toLocaleString()}
-                    </td>
-                    <td className="py-1.5 px-3 text-right font-mono tabular-nums text-slate-100 font-medium">
-                      {row.avgInput.toLocaleString()}
-                    </td>
-                    <td className="py-1.5 pl-3 text-right font-mono tabular-nums text-amber-400">
-                      {row.ngTotal.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-[#D1B8FF]/10 text-sm">
+                {weekdayStats.map((row) => {
+                  const pct =
+                    row.avgPlan > 0
+                      ? Math.min(100, Math.round((row.avgInput / row.avgPlan) * 100))
+                      : 0;
+                  return (
+                    <tr
+                      key={row.day}
+                      className="h-10 hover:bg-[#6A2FC8]/18 transition-colors duration-150"
+                    >
+                      <td className="py-1.5 pr-3 font-medium text-[#F2E9FF]">
+                        {row.day}
+                        <span className="ml-1.5 text-xs text-[#D1B8FF]/60 font-mono">
+                          ({row.count}d)
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-[#D1B8FF]/70">
+                        {row.avgPlan.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono tabular-nums text-[#F2E9FF] font-medium">
+                        <div>{row.avgInput.toLocaleString()}</div>
+                        <div className="mt-1 h-[2px] w-16 ml-auto bg-[#0B0720]/75 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8]"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </td>
+                      <td className="py-1.5 pl-3 text-right font-mono tabular-nums text-amber-300">
+                        {row.ngTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {weekdayStats.length === 0 && (
                   <tr>
                     <td
                       colSpan={4}
-                      className="py-6 text-center text-xs text-slate-400"
+                      className="py-6 text-center text-xs text-[#D1B8FF]/65"
                     >
                       No active weekdays in current selection.
                     </td>

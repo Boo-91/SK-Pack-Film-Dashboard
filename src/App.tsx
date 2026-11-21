@@ -80,7 +80,7 @@ const INITIAL_PARSED = parseRowsToCapacityData(
 
 const DEFAULT_CONNECTION: SheetConnectionState = {
   mode: 'demo',
-  sourceLabel: 'SK Pack Film (Uploaded Sheet)',
+  sourceLabel: 'Live Google Sheet',
   dailyIssuesTab: DEFAULT_DAILY_ISSUES_TAB,
   monthlyIssuesTab: DEFAULT_MONTHLY_ISSUES_TAB,
   dailyIssuesSynced: false,
@@ -582,20 +582,20 @@ export default function App() {
         }}
         className={`group relative w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer ${
           active
-            ? 'text-white'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-[#111F38]'
+            ? 'text-[#F2E9FF]'
+            : 'text-[#D1B8FF]/65 hover:text-[#F2E9FF] hover:bg-[#6A2FC8]/18'
         }`}
       >
         {active && (
           <motion.span
             layoutId={isMobile ? 'mobileNavActive' : 'desktopNavActive'}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 bg-blue-600 rounded-lg"
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 bg-gradient-to-r from-[#6A2FC8] to-[#9D71E8]/90 rounded-lg shadow-[0_0_24px_-4px_rgba(106,47,200,0.8),inset_0_1px_0_0_rgba(242,233,255,0.28)]"
           />
         )}
         <Icon
           className={`relative z-10 w-4 h-4 shrink-0 transition-transform duration-150 ${
-            active ? '' : 'group-hover:translate-x-0.5'
+            active ? 'text-[#F2E9FF]' : 'text-[#9D71E8] group-hover:translate-x-0.5'
           }`}
         />
         <span
@@ -622,10 +622,10 @@ export default function App() {
             }}
             className="group block min-w-0"
           >
-            <div className="text-lg font-bold tracking-tight text-white whitespace-nowrap group-hover:text-sky-300 transition-colors duration-150">
+            <div className="text-lg font-bold tracking-tight text-[#F2E9FF] whitespace-nowrap group-hover:text-[#D1B8FF] transition-colors duration-150">
               Insight Dashboard
             </div>
-            <p className="text-xs font-medium text-sky-400/85 tracking-wide mt-0.5 whitespace-nowrap group-hover:text-sky-300 transition-colors duration-150">
+            <p className="text-xs font-medium text-[#9D71E8] tracking-wide mt-0.5 whitespace-nowrap group-hover:text-[#D1B8FF] transition-colors duration-150">
               SK Pack Film Department
             </p>
           </a>
@@ -633,7 +633,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setMobileNavOpen(false)}
-              className="p-1.5 text-slate-400 hover:text-white rounded-md transition-colors cursor-pointer"
+              className="p-1.5 text-[#D1B8FF]/70 hover:text-[#F2E9FF] rounded-md transition-colors cursor-pointer"
               aria-label="Close navigation menu"
             >
               <X className="w-5 h-5" />
@@ -643,8 +643,8 @@ export default function App() {
 
         <nav className="space-y-3.5" aria-label="Primary navigation">
           {/* Packing Section Container */}
-          <div className="bg-[#060D1A]/75 border border-[#162542] rounded-xl p-2 space-y-1">
-            <p className="px-2.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="bg-[#25134D]/35 backdrop-blur-md border border-[#D1B8FF]/14 rounded-xl p-2 space-y-1 shadow-[inset_0_1px_0_0_rgba(242,233,255,0.06)]">
+            <p className="px-2.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#D1B8FF]/65">
               Packing
             </p>
             <div className="space-y-1">
@@ -653,8 +653,8 @@ export default function App() {
           </div>
 
           {/* Quality Section Container */}
-          <div className="bg-[#060D1A]/75 border border-[#162542] rounded-xl p-2 space-y-1">
-            <p className="px-2.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="bg-[#25134D]/35 backdrop-blur-md border border-[#D1B8FF]/14 rounded-xl p-2 space-y-1 shadow-[inset_0_1px_0_0_rgba(242,233,255,0.06)]">
+            <p className="px-2.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#D1B8FF]/65">
               Quality
             </p>
             <div className="space-y-1">
@@ -665,30 +665,30 @@ export default function App() {
       </div>
 
       {/* Data Source & Signed-In User Summary */}
-      <div className="pt-5 border-t border-[#1B2B48] space-y-4">
+      <div className="pt-5 border-t border-[#D1B8FF]/14 space-y-4">
         <div className="space-y-1">
-          <p className="text-xs font-medium text-slate-400">Data Source</p>
-          <p className="text-sm font-semibold text-slate-100 truncate">
+          <p className="text-xs font-medium text-[#D1B8FF]/65">Data Source</p>
+          <p className="text-sm font-semibold text-[#F2E9FF] truncate">
             {isBootstrapping && connection.mode === 'demo'
               ? 'Connecting Live Sheet...'
               : connection.sourceLabel}
           </p>
-          <p className="text-xs text-slate-400 font-mono tabular-nums">
+          <p className="text-xs text-[#D1B8FF]/65 font-mono tabular-nums">
             Synced {connection.lastSyncedAt}
           </p>
         </div>
 
-        <div className="pt-3.5 border-t border-[#162542]">
+        <div className="pt-3.5 border-t border-[#D1B8FF]/12">
           {user ? (
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <Mail className="w-3.5 h-3.5 text-[#9D71E8] shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-slate-400">
+                  <p className="text-[11px] font-medium text-[#D1B8FF]/65">
                     Signed-in User
                   </p>
                   <p
-                    className="text-xs font-medium text-slate-100 truncate"
+                    className="text-xs font-medium text-[#F2E9FF] truncate"
                     title={user.email || user.displayName || 'Google User'}
                   >
                     {user.email || user.displayName}
@@ -700,7 +700,7 @@ export default function App() {
                 onClick={handleGoogleLogout}
                 title="Sign out"
                 aria-label="Sign out"
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-[#13223D] rounded-md transition-colors duration-150 shrink-0 cursor-pointer"
+                className="p-1.5 text-[#D1B8FF]/70 hover:text-[#F2E9FF] hover:bg-[#6A2FC8]/25 rounded-md transition-colors duration-150 shrink-0 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -708,12 +708,12 @@ export default function App() {
           ) : (
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <Mail className="w-3.5 h-3.5 text-[#D1B8FF]/50 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-slate-400">
+                  <p className="text-[11px] font-medium text-[#D1B8FF]/65">
                     User Account
                   </p>
-                  <p className="text-xs text-slate-400 truncate">
+                  <p className="text-xs text-[#D1B8FF]/65 truncate">
                     Not signed in
                   </p>
                 </div>
@@ -722,7 +722,7 @@ export default function App() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="text-xs font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 {isLoggingIn ? 'Signing in...' : 'Sign in'}
               </button>
@@ -736,9 +736,9 @@ export default function App() {
   if (isAuthChecking) {
     return (
       <MotionConfig reducedMotion="user">
-        <div className="min-h-screen bg-[#060D1A] text-slate-100 flex items-center justify-center p-6">
-          <div className="flex items-center gap-3 text-sm text-slate-300">
-            <RefreshCw className="w-4 h-4 text-sky-400 animate-spin" />
+        <div className="min-h-screen cosmic-stage text-[#F2E9FF] flex items-center justify-center p-6">
+          <div className="glass-panel rounded-2xl px-6 py-4 flex items-center gap-3 text-sm text-[#D1B8FF]">
+            <RefreshCw className="w-4 h-4 text-[#9D71E8] animate-spin" />
             <span>Checking sign-in session...</span>
           </div>
         </div>
@@ -760,9 +760,9 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-[#060D1A] text-slate-100 flex">
+      <div className="min-h-screen cosmic-stage text-[#F2E9FF] flex relative">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 bg-[#091224] border-r border-[#1B2B48] sticky top-0 h-screen">
+        <aside className="hidden lg:block w-64 shrink-0 glass-sidebar border-r sticky top-0 h-screen z-20">
           {renderSidebarContent(false)}
         </aside>
 
@@ -774,8 +774,8 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.16 }}
-                className="fixed inset-0 bg-[#02060F]/75 backdrop-blur-[2px]"
+                transition={{ duration: 0.18 }}
+                className="fixed inset-0 bg-[#0B0720]/75 backdrop-blur-sm"
                 onClick={() => setMobileNavOpen(false)}
                 aria-hidden="true"
               />
@@ -783,8 +783,8 @@ export default function App() {
                 initial={{ x: -260 }}
                 animate={{ x: 0 }}
                 exit={{ x: -260 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-64 bg-[#091224] border-r border-[#1B2B48] h-full"
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                className="relative z-10 w-64 glass-sidebar border-r h-full shadow-[20px_0_50px_-15px_rgba(106,47,200,0.45)]"
               >
                 {renderSidebarContent(true)}
               </motion.aside>
@@ -793,19 +793,19 @@ export default function App() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col relative z-10">
           {/* Top Bar */}
-          <header className="h-14 bg-[#091224]/95 backdrop-blur-md border-b border-[#1B2B48] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+          <header className="h-14 glass-header border-b px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-slate-300 hover:text-white rounded-lg hover:bg-[#13223D] transition-colors cursor-pointer"
+                className="lg:hidden p-2 -ml-2 text-[#D1B8FF]/80 hover:text-[#F2E9FF] rounded-lg hover:bg-[#6A2FC8]/25 transition-colors cursor-pointer"
                 aria-label="Open navigation menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <span className="text-sm font-medium text-slate-300 truncate">
+              <span className="text-sm font-medium text-[#D1B8FF] truncate">
                 {viewTitles[activeView]}
               </span>
             </div>
@@ -815,7 +815,7 @@ export default function App() {
                 value={autoRefreshSec}
                 onChange={(e) => setAutoRefreshSec(Number(e.target.value))}
                 aria-label="Auto-sync interval"
-                className="hidden sm:block h-9 px-2.5 text-xs font-medium bg-[#0C172B] border border-[#1E3154] rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors duration-150"
+                className="hidden sm:block h-9 px-2.5 text-xs font-medium glass-control rounded-lg cursor-pointer"
               >
                 <option value={0}>Sync: Manual</option>
                 <option value={30}>Auto-Sync: 30s</option>
@@ -826,7 +826,7 @@ export default function App() {
                 type="button"
                 onClick={handleSyncNow}
                 disabled={isBootstrapping || isSyncing}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 active:scale-[0.98] disabled:opacity-60 rounded-lg transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium btn-violet-glow disabled:opacity-60 rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
@@ -843,37 +843,41 @@ export default function App() {
           {/* Main Workspace Viewport */}
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1440px] w-full mx-auto space-y-6">
             {syncError && (
-              <div className="bg-red-950/50 border border-red-800/60 rounded-xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5 text-xs sm:text-sm text-red-200">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-rose-950/45 backdrop-blur-md border border-rose-400/35 rounded-xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_24px_-8px_rgba(244,63,94,0.4)]"
+              >
+                <div className="flex items-start gap-2.5 text-xs sm:text-sm text-rose-100">
+                  <AlertCircle className="w-4 h-4 text-rose-300 shrink-0 mt-0.5" />
                   <span>{syncError}</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleSyncNow}
-                  className="text-xs font-medium text-red-300 hover:text-red-100 whitespace-nowrap shrink-0 cursor-pointer"
+                  className="text-xs font-medium text-rose-200 hover:text-white whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   Retry Sync
                 </button>
-              </div>
+              </motion.div>
             )}
 
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               >
                 {activeView === 'overview' && (
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                       <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white">
+                        <h1 className="text-2xl font-bold tracking-tight text-[#F2E9FF]">
                           Packing Capacity & QC Overview
                         </h1>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="text-sm text-[#D1B8FF]/70 mt-1">
                           {connection.sourceLabel} ·{' '}
                           {weekFilter !== 'All'
                             ? `${weekFilter}${
@@ -888,7 +892,7 @@ export default function App() {
                                 )
                                 .join(' · ')}{' '}
                           · Synced{' '}
-                          <span className="font-mono tabular-nums text-slate-300">
+                          <span className="font-mono tabular-nums text-[#F2E9FF]">
                             {connection.lastSyncedAt}
                           </span>
                         </p>
@@ -897,7 +901,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setWeekFilter('All')}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300 self-start sm:self-auto transition-colors cursor-pointer"
+                          className="text-xs font-medium text-[#D1B8FF] hover:text-[#F2E9FF] self-start sm:self-auto transition-colors cursor-pointer"
                         >
                           Show 3-Week Window
                         </button>
@@ -941,10 +945,10 @@ export default function App() {
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                       <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white">
+                        <h1 className="text-2xl font-bold tracking-tight text-[#F2E9FF]">
                           Daily Packing Capacity Log
                         </h1>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="text-sm text-[#D1B8FF]/70 mt-1">
                           {todayRecord
                             ? `Today (${todayRecord.dateLabel} · ${todayRecord.weekday} · ${todayRecord.weekNo}) · `
                             : ''}
@@ -996,10 +1000,10 @@ export default function App() {
                 {activeView === 'weekly' && (
                   <div className="space-y-6">
                     <div>
-                      <h1 className="text-2xl font-bold tracking-tight text-white">
+                      <h1 className="text-2xl font-bold tracking-tight text-[#F2E9FF]">
                         Weekly Capacity Summary
                       </h1>
-                      <p className="text-sm text-slate-400 mt-1">
+                      <p className="text-sm text-[#D1B8FF]/70 mt-1">
                         Plan vs. Input volume, finished items, PPA/OQC NG, and remaining rework by Week No.
                       </p>
                     </div>
